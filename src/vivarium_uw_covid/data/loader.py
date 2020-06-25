@@ -101,14 +101,14 @@ def _load_em_from_meid(location, meid, measure):
     return utilities.sort_hierarchical_data(data)
 
 
-seiir_dir = '/ihme/covid-19/seir-pipeline-outputs'
+from ..paths import SEIIR_DIR
 
 def load_covariates(cov_dir):
     """Load all covariate values
     
     Parameters
     ----------
-    cov_dir : str, a directory in $seiir_dir/covariate/,
+    cov_dir : str, a directory in $SEIIR_DIR/covariate/,
               e.g. '2020_06_23.03.01'
     
     Results
@@ -117,7 +117,7 @@ def load_covariates(cov_dir):
     rows for each location for each time
     """
     
-    df_covs = pd.read_csv(f'{seiir_dir}/covariate/{cov_dir}/cached_covariates.csv', index_col=0)
+    df_covs = pd.read_csv(f'{SEIIR_DIR}/covariate/{cov_dir}/cached_covariates.csv', index_col=0)
     df_covs.index = df_covs.date.map(pd.Timestamp)
     return df_covs
 
@@ -127,7 +127,7 @@ def load_effect_coefficients(run_dir, loc_id):
     
     Parameters
     ----------
-    run_dir : str, a directory in $seiir_dir/regression/,
+    run_dir : str, a directory in $SEIIR_DIR/regression/,
               e.g. '2020_06_23.07'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
@@ -139,7 +139,7 @@ def load_effect_coefficients(run_dir, loc_id):
     """
     coeffs = {}
     for draw in range(1_000):
-        df_coeffs = pd.read_csv(f'{seiir_dir}/regression/{run_dir}/coefficients/coefficients_{draw}.csv', index_col=0)
+        df_coeffs = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/coefficients/coefficients_{draw}.csv', index_col=0)
         s_coeffs = df_coeffs.set_index('group_id').loc[loc_id].sort_values()
         coeffs[draw] = s_coeffs
     coeffs = pd.DataFrame(coeffs).T
@@ -152,7 +152,7 @@ def load_seiir_initial_states(run_dir, loc_id, start_date):
     
     Parameters
     ----------
-    run_dir : str, a directory in $seiir_dir/regression/,
+    run_dir : str, a directory in $SEIIR_DIR/regression/,
               e.g. '2020_06_23.07'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
@@ -166,7 +166,7 @@ def load_seiir_initial_states(run_dir, loc_id, start_date):
 
     initial_states = {}
     for draw in range(1_000):
-        df_proj = pd.read_csv(f'{seiir_dir}/forecast/{run_dir}/component_draws/{loc_id}/draw_{draw}.csv', index_col=0)
+        df_proj = pd.read_csv(f'{SEIIR_DIR}/forecast/{run_dir}/component_draws/{loc_id}/draw_{draw}.csv', index_col=0)
         df_proj.index = df_proj.pop('date').map(pd.Timestamp)
         s_proj = df_proj.loc[start_date]
         initial_states[draw] = s_proj
@@ -179,7 +179,7 @@ def load_seiir_params(run_dir, theta):
     
     Parameters
     ----------
-    run_dir : str, a directory in $seiir_dir/regression/,
+    run_dir : str, a directory in $SEIIR_DIR/regression/,
               e.g. '2020_06_23.07'
     theta : float > 0, the value of the theta parameter, which is not stored
             the param_draw csv
@@ -191,7 +191,7 @@ def load_seiir_params(run_dir, theta):
     """
     params = {}
     for draw in range(1_000):
-        df_params = pd.read_csv(f'{seiir_dir}/regression/{run_dir}/parameters/params_draw_{draw}.csv')
+        df_params = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/parameters/params_draw_{draw}.csv')
         params[draw] = df_params.set_index('params')['values'].to_dict()
         params[draw].pop('day_shift')  # TODO: find out what this is, and if I should be using it
         params[draw]['theta'] = theta
