@@ -167,14 +167,14 @@ AGE_GROUPS = ()
 # TODO - add causes of death
 CAUSES_OF_DEATH = (
     'other_causes',
-    DIARRHEA_WITH_CONDITION_STATE_NAME,
+#    DIARRHEA_WITH_CONDITION_STATE_NAME,
 )
 # TODO - add causes of disability
-CAUSES_OF_DISABILITY = (
-    DIARRHEA_WITH_CONDITION_STATE_NAME,
-)
-STATES = (state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
-TRANSITIONS = (transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
+CAUSES_OF_DISABILITY = tuple()
+#    DIARRHEA_WITH_CONDITION_STATE_NAME,
+#)
+STATES = tuple() #(state for model in DISEASE_MODELS for state in DISEASE_MODEL_MAP[model]['states'])
+TRANSITIONS = tuple() #(transition for model in DISEASE_MODELS for transition in DISEASE_MODEL_MAP[model]['transitions'])
 
 TEMPLATE_FIELD_MAP = {
     'POP_STATE': POP_STATES,
@@ -183,8 +183,8 @@ TEMPLATE_FIELD_MAP = {
     'AGE_GROUP': AGE_GROUPS,
     'CAUSE_OF_DEATH': CAUSES_OF_DEATH,
     'CAUSE_OF_DISABILITY': CAUSES_OF_DISABILITY,
-    'STATE': STATES,
-    'TRANSITION': TRANSITIONS,
+#    'STATE': STATES,
+#    'TRANSITION': TRANSITIONS,
 }
 
 
