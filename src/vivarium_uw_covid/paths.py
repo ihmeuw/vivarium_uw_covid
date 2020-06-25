@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import vivarium_uw_covid
 import vivarium_uw_covid.globals as project_globals
 
 BASE_DIR = Path(vivarium_uw_covid.__file__).resolve().parent
