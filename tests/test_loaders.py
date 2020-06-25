@@ -12,16 +12,19 @@ def test_load_covariates():
 
     assert 'mask_use' in df_covs.columns
 
+
 def test_load_coeffs():
     coeffs = load_effect_coefficients(run_dir, loc_id)
     assert 'mask_use' in coeffs.columns, 'expect a mask_use effect coefficient'
     assert len(coeffs) == 1_000, 'expect 1,000 draws'
+
 
 def test_load_seiir_initial_states():
     initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
     for state in ['S', 'E', 'I1', 'I2', 'R']:
         assert state in initial_states.columns, f'expect column for state "{state}"'
     assert len(initial_states) == 1_000, 'expect 1,000 draws'
+
 
 def test_load_seiir_params():
     params = load_seiir_params(run_dir, theta=0)
