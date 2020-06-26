@@ -23,7 +23,7 @@ def test_run_hybrid_model():
 
     n_draws = 1
     df_list_1, df_list_2 = run_hybrid_model(n_draws, n_simulants=100_000,
-                                            params=params,
+                                            mixing_parameter=.5, params=params,
                                             beta_agent=beta, beta_compartment=beta,
                                             start_time=t0, initial_states=initial_states)
 
