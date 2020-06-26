@@ -28,10 +28,14 @@ def agent_covid_initial_states(n_simulants, compartment_sizes):
 
 
 def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
-    # find the number infectious
     n_infectious = ((df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
     n_simulants = len(df)
-    uniform_random_draw = np.random.uniform(size=n_simulants)
+    infection_rate = (beta * n_infectious**alpha + theta) / n_simulants
+
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
+
+def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta):
+    uniform_random_draw = np.random.uniform(size=len(df))
 
     # update from R back to S, to allow in-place computation
     pr_I2_to_R = 1 - np.exp(-gamma2)
@@ -46,8 +50,8 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
     rows = (df.covid_state == 'E') & (uniform_random_draw < pr_E_to_I1)
     df.loc[rows, 'covid_state'] = 'I1'
 
-    pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta)/ n_simulants)
-    rows = (df.covid_state == 'S') & (uniform_random_draw < pr_infected)
+    pr_S_to_E = 1 - np.exp(-infection_rate)
+    rows = (df.covid_state == 'S') & (uniform_random_draw < pr_S_to_E)
     df.loc[rows, 'covid_state'] = 'E'
     return np.sum(rows) # new_infections
 

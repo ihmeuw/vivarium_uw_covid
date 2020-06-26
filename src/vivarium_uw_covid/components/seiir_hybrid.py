@@ -6,95 +6,51 @@ Date: 2020-06-25
 """
 
 import numpy as np, pandas as pd
-#from .seiir_compartment import 
-from .seiir_agent import agent_covid_initial_states
+from .seiir_compartmental import compartmental_covid_step
+from .seiir_agent import agent_covid_initial_states, agent_covid_step_with_infection_rate
 
 
-def compartmental_hybrid_step(s0, s_ip, alpha, beta, gamma1, gamma2, sigma, theta):
+def compartmental_hybrid_step(s0, s_ip, mixing_parameter, **params):
     """Find the compartment sizes for the compartmental part of a hybrid model
 
     Parameters
     ----------
     s0 : counts for compartmental part
     s_ip : counts for individual part
-    addl params : transmission parameters
+    addl params : transmission parameters (alpha, beta, gamma1, gamma2, sigma, theta)
     """
-    s1 = s0.copy()
+    n_simulants = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R) + mixing_parameter * (s_ip.S + s_ip.E + s_ip.I1 + s_ip.I2 + s_ip.R)
+    n_infectious = (s0.I1 + s0.I2) + mixing_parameter * (s_ip.I1 + s_ip.I2)
     
-    n_simulants = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R) + (s_ip.S + s_ip.E + s_ip.I1 + s_ip.I2 + s_ip.R)
-    n_infectious = (s0.I1 + s0.I2) + (s_ip.I1 + s_ip.I2)
-    
-    ### TODO: refactor this so it does not repeat the code from the non-hybrid compartmental model
-    pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta) / n_simulants)
-    dS = s0.S*pr_infected
-    s1.S -= dS
-    s1.E += dS
-    s1.new_infections = dS
-    
-    pr_E_to_I1 = 1 - np.exp(-sigma)
-    dE = s0.E*pr_E_to_I1
-    s1.E -= dE
-    s1.I1 += dE
-
-    
-    pr_I1_to_I2 = 1 - np.exp(-gamma1)
-    dI1 = s0.I1*pr_I1_to_I2
-    s1.I1 -= dI1
-    s1.I2 += dI1
-    
-    
-    pr_I2_to_R = 1 - np.exp(-gamma2)
-    dI2 = s0.I2*pr_I2_to_R
-    s1.I2 -= dI2
-    s1.R += dI2
-
+    s1 = compartmental_covid_step(s0, n_simulants, n_infectious, **params)
     
     return s1
 
                
-def individual_hybrid_step(df, s0, alpha, beta, gamma1, gamma2, sigma, theta):
+def individual_hybrid_step(df, s0, mixing_parameter, alpha, beta, gamma1, gamma2, sigma, theta):
     """ df : population table for individuals
     s0 : compartment sizes for outside population
     addl parameters : transmission parameters
     """
-    
-    # find the number infectious
     n_infectious = ((df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
     n_simulants = len(df)
     
     n_infectious_out = (s0.I1 + s0.I2)
     n_simulants_out = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R)
-    
-    # update from R back to S, to allow in-place computation
-    uniform_random_draw = np.random.uniform(size=n_simulants)
-    pr_I2_to_R = 1 - np.exp(-gamma2)
-    rows = (df.covid_state == 'I2') & (uniform_random_draw < pr_I2_to_R)
-    df.loc[rows, 'covid_state'] = 'R'
+    infection_rate = ((1 - mixing_parameter) * (beta * n_infectious**alpha + theta) / n_simulants + mixing_parameter * beta * n_infectious_out**alpha / n_simulants_out)
 
-    pr_I1_to_I2 = 1 - np.exp(-gamma1)
-    rows = (df.covid_state == 'I1') & (uniform_random_draw < pr_I1_to_I2)
-    df.loc[rows, 'covid_state'] = 'I2'
-    
-    pr_E_to_I1 = 1 - np.exp(-sigma)
-    rows = (df.covid_state == 'E') & (uniform_random_draw < pr_E_to_I1)
-    df.loc[rows, 'covid_state'] = 'I1'
-    
-    mixing_parameter = .5 # addl parameter for how much time students are mixed with rest of population
-    pr_infected = 1 - np.exp(-((1 - mixing_parameter) * beta * (n_infectious**alpha + theta) / n_simulants
-                              + mixing_parameter * beta * n_infectious_out**alpha / n_simulants_out))
-    rows = (df.covid_state == 'S') & (uniform_random_draw < pr_infected)
-    df.loc[rows, 'covid_state'] = 'E'
-
-    return np.sum(rows)
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
                
 
-def run_hybrid_model(n_draws, n_simulants, params, beta_agent, beta_compartment, start_time, initial_states):
+def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent, beta_compartment, start_time, initial_states):
     """Project population sizes from start time to end of beta.index
     
     Parameters
     ----------
     n_draws : int
     n_simulants : int
+    mixing_parameter : float >= 0 and <= 1, signifying the fraction of time the
+                       agents spend with the outside population (vs with other agents)
     params : dict-of-dicts, where draw maps to dict with values for 
                 alpha, gamma1, gamma2, sigma, theta : float
     beta : pd.DataFrame with index of dates and columns for draws
@@ -130,9 +86,12 @@ def run_hybrid_model(n_draws, n_simulants, params, beta_agent, beta_compartment,
 
             df_compartment.loc[t+dt] = compartmental_hybrid_step(
                                             df_compartment.loc[t], df_individual_counts.loc[t],
-                                            beta=beta_compartment.loc[t, draw], **params[draw])
+                                            beta=beta_compartment.loc[t, draw],
+                                            mixing_parameter=mixing_parameter, **params[draw])
 
-            df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual, df_compartment.loc[t], beta=beta_agent.loc[t, draw], **params[draw])
+            df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual,
+                                        df_compartment.loc[t], beta=beta_agent.loc[t, draw],
+                                        mixing_parameter=mixing_parameter, **params[draw])
 
         df_individual_counts.loc[df_individual_counts.index[-1]] = df_individual.covid_state.value_counts()
 
