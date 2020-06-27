@@ -146,6 +146,27 @@ def load_effect_coefficients(run_dir, loc_id):
     return coeffs
 
 
+def load_beta_fit(run_dir, loc_id):
+    """Load 1,000 draws of beta from SEIIR fit (the step before beta regression)
+    
+    Parameters
+    ----------
+    run_dir : str, a directory in $SEIIR_DIR/regression/,
+              e.g. '2020_06_23.07'
+    loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
+             /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
+    
+    Results
+    -------
+    returns dict of pd.DataFrames, with key for each draw
+    """
+    betas = {}
+    for draw in range(1_000):
+        df_fit = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/betas/{loc_id}/fit_draw_{draw}.csv', index_col=0)
+        betas[draw] = df_fit
+    return betas
+
+
 def load_seiir_initial_states(run_dir, loc_id, start_date):
     """Load 1,000 draws of compartment sizes on specified date,
     to use as initial states for simulation

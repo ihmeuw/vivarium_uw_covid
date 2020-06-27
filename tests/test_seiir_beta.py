@@ -22,7 +22,7 @@ def test_beta_predict():
 
 
 def test_make_alternative_covariates():
-    assert not np.allclose(df_covs.mask_use, .99)
-    df_alt = make_alternative_covariates(df_covs, loc_id, mask_use=.99)
-    assert np.allclose(df_alt.mask_use, .99)
+    df_alt = make_alternative_covariates(df_covs, loc_id, t0, mask_use=.99)
+    assert not np.allclose(df_alt.mask_use, .99)
+    assert np.allclose(df_alt.mask_use.loc[t0:], .99)
 
