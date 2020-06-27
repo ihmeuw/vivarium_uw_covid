@@ -27,6 +27,13 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections'):
     plt.ylabel(f"Number of {metric.replace('_', ' ')}")
                
     plt.grid()
-    if ymax:
-        plt.axis(ymin=0, ymax=ymax)
+    if not ymax:
+        ymax = pd.Series(np.median(s_list, axis=0)).dropna().max() * 1.25
+
+    # UW Fall 2020 Quarter starts 2020-09-30 and ends 2020-12-11 (final exam week ends 2020-12-18)
+    # https://www.washington.edu/students/reg/2021cal.html
+    # TODO: draw a line for when it ends, and note the metric values at this point
+    
+
+    plt.axis(ymin=0, ymax=ymax)
     plt.title(title)
