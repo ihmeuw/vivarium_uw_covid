@@ -34,7 +34,7 @@ def compartmental_hybrid_step(s_compartment, s_agent, mixing_parameter, **params
     return s1
 
                
-def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta, gamma1, gamma2, sigma, theta):
+def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta_agent, beta_compartment, gamma1, gamma2, sigma, theta):
     """ df : population table for individuals
     s_compartment : compartment sizes for outside population
     addl parameters : transmission parameters
@@ -44,8 +44,8 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta, gam
     
     n_infectious_compartment = (s_compartment.I1 + s_compartment.I2)
     n_simulants_compartment = (s_compartment.S + s_compartment.E + s_compartment.I1 + s_compartment.I2 + s_compartment.R)
-    infection_rate = ((1 - mixing_parameter) * (beta * n_infectious_agent**alpha + theta) / n_simulants_agent
-                      + mixing_parameter * beta * n_infectious_compartment**alpha / n_simulants_compartment)
+    infection_rate = ((1 - mixing_parameter) * (beta_agent * n_infectious_agent**alpha + theta) / n_simulants_agent
+                      + mixing_parameter * beta_compartment * n_infectious_compartment**alpha / n_simulants_compartment)
 
     return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
                
@@ -100,7 +100,9 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent,
                                             mixing_parameter=mixing_parameter, **params[draw])
 
             df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual,
-                                        df_compartment.loc[t], beta=beta_agent.loc[t, draw],
+                                        df_compartment.loc[t],
+                                        beta_agent=beta_agent.loc[t, draw],
+                                        beta_compartment=beta_compartment.loc[t, draw],
                                         mixing_parameter=mixing_parameter, **params[draw])
 
         # store last day of counts from the agent states
