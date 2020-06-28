@@ -26,3 +26,13 @@ def test_make_alternative_covariates():
     assert not np.allclose(df_alt.mask_use, .99)
     assert np.allclose(df_alt.mask_use.loc[t0:], .99)
 
+
+def test_beta_finalize():
+    beta_pred = beta_predict(coeffs, df_covs[df_covs.location_id == loc_id])
+    beta_fit  = load_beta_fit(run_dir, loc_id)
+    beta_final = beta_finalize(beta_pred, {0:beta_fit[0]})  # just test for one draw of beta_fit, because that is faster
+
+    assert pd.Timestamp(beta_fit[0].date.iloc[-1]) == beta_final[0].dropna().index[0], 'beta_final non-nan values should start on the last day of beta_fit'
+    assert beta_pred.index[-1] == beta_final.index[-1], 'beta_final should end on the last day of beta_pred'
+
+
