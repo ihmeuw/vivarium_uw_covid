@@ -50,7 +50,10 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta_agen
     return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
                
 
-def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent, beta_compartment, start_time, initial_states):
+def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
+                     beta_agent, beta_compartment,
+                     start_time,
+                     initial_states_agent, initial_states_compartment):
     """Project population sizes from start time to end of beta.index
     
     Parameters
@@ -61,9 +64,11 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent,
                        agents spend with the outside population (vs with other agents)
     params : dict-of-dicts, where draw maps to dict with values for 
                 alpha, gamma1, gamma2, sigma, theta : float
-    beta : pd.DataFrame with index of dates and columns for draws
+    beta_agent : pd.DataFrame with index of dates and columns for draws
+    beta_compartment : pd.DataFrame with index of dates and columns for draws
     start_time : pd.Timestamp
-    initial_states : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     
     Results
     -------
@@ -78,7 +83,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent,
     for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
         ## initialize population table for individual-based model
         df_individual = pd.DataFrame(index=range(n_simulants))
-        df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states.loc[draw])
+        df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states_agent.loc[draw])
 
         ## initialize counts table for inidividual and compartmental models
         df_individual_counts = pd.DataFrame(index=days, columns=states + ['new_infections'])
@@ -86,7 +91,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params, beta_agent,
         df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
         #### initialize compartmental model state sizes for time zero
         for state in states:
-            df_compartment.loc[start_time, state] = initial_states.loc[draw, state]
+            df_compartment.loc[start_time, state] = initial_states_compartment.loc[draw, state]
 
 
         ## step through hybrid simulation

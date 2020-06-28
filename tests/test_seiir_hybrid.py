@@ -25,7 +25,9 @@ def test_run_hybrid_model():
     df_list_1, df_list_2 = run_hybrid_model(n_draws, n_simulants=100_000,
                                             mixing_parameter=.5, params=params,
                                             beta_agent=beta, beta_compartment=beta,
-                                            start_time=t0, initial_states=initial_states)
+                                            start_time=t0,
+                                            initial_states_agent=initial_states,
+                                            initial_states_compartment=initial_states)
 
     assert len(df_list_1) == n_draws
     for state in ['S', 'E', 'I1', 'I2', 'R']:
