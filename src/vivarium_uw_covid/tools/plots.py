@@ -61,7 +61,7 @@ def plot_medians_over_time(results, legend_title):
 #     plt.semilogy()
 
 
-def plot_medians_at_end_of_quarter(results, close_date):
+def plot_medians_at_end_of_quarter(results, close_date, xlabel):
     plt.figure(figsize=(11, 4.25), dpi=120)
 
     xx, yy, yy_lb, yy_ub = [], [], [], []
@@ -75,13 +75,13 @@ def plot_medians_at_end_of_quarter(results, close_date):
         
     plt.errorbar(xx, yy, yerr=[yy_lb, yy_ub], marker='o', linestyle='-')
     plt.ylabel(f"Median cumulative infections on {close_date.strftime('%D')}")
-    # plt.semilogy()
+    plt.xlabel(xlabel)
     plt.grid()
     plt.axis(ymin=0)
 
 
-def plot_w_ui(results, testing, ymax=0):
+def plot_w_ui(results, testing, title, ymax=0):
     plot_results(results[testing], ymax=ymax,
-                    title=f'Hybrid model with (some) testing rate {testing}',
-                    metric='cumulative_infections')
+                 title=f'{title} {testing}',
+                 metric='cumulative_infections')
 
