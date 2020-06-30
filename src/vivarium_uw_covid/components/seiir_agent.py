@@ -34,7 +34,21 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
 
     return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
 
-def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta, testing_rate):
+def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+                                         use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
+    """Make one step for agent-based model
+
+    Parameters
+    ----------
+    TODO: additional docstring parameters
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
+
+    Results
+    -------
+    returns number of agents infected during this time step
+    """
     uniform_random_draw = np.random.uniform(size=len(df))
 
     # update from R back to S, to allow in-place computation
@@ -55,19 +69,21 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     df.loc[rows, 'covid_state'] = 'E'
     new_infections = np.sum(rows)
 
-    #### experimental code for mechanistic testing-and-isolation model
-    test_positive_rate = 0.05
-    n_test_positive = testing_rate * test_positive_rate * len(df)
-    n_infected = ((df.covid_state == 'E') | (df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
+    #### code for mechanistic testing-and-isolation model
+    #### TODO: refactor into a separate Vivarium component
+    if use_mechanistic_testing:
+        n_test_positive = test_rate * test_positive_rate * len(df)
+        n_infected = ((df.covid_state == 'E') | (df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
 
-    testing_rate_among_infected = n_test_positive / (n_infected + 1)  # HACK: add 1 to denominator to avoid divide by zero
-    if testing_rate_among_infected > 10:
-        pr_tested = 1
-    else:
-        pr_tested = 1 - np.exp(-testing_rate_among_infected)
-    #pr_tested = 1 - np.exp(-testing_rate)
-    rows = (df.covid_state != 'S') & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
-    df.loc[rows, 'covid_state'] = 'R'  # move any non-S state individual to state R if they are tested (FIXME: too simple)
+        if n_infected > 0:
+            test_rate_among_infected = n_test_positive / n_infected
+            if test_rate_among_infected > 10:
+                pr_tested = 1
+            else:
+                pr_tested = 1 - np.exp(-test_rate_among_infected)
+    
+            rows = (df.covid_state != 'S') & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
+            df.loc[rows, 'covid_state'] = 'R'  # move any non-S state individual to state R if they are tested (FIXME: too simple)
 
 
     return new_infections
