@@ -34,10 +34,21 @@ def compartmental_hybrid_step(s_compartment, s_agent, mixing_parameter, **params
     return s1
 
                
-def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta_agent, beta_compartment, gamma1, gamma2, sigma, theta):
-    """ df : population table for individuals
+def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
+                           beta_agent, beta_compartment,
+                           gamma1, gamma2, sigma, theta,
+                           use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
+    """Make one step for hybrid model
+
+    Parameters
+    ----------
+    TODO: additional docstring parameters
+    df : population table for individuals
     s_compartment : compartment sizes for outside population
     addl parameters : transmission parameters
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
     """
     n_infectious_agent = ((df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
     n_simulants_agent = len(df)
@@ -47,13 +58,15 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha, beta_agen
     infection_rate = ((1 - mixing_parameter) * (beta_agent * n_infectious_agent**alpha + theta) / n_simulants_agent
                       + mixing_parameter * beta_compartment * n_infectious_compartment**alpha / n_simulants_compartment)
 
-    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+                                                use_mechanistic_testing, test_rate, test_positive_rate)
                
 
 def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                      beta_agent, beta_compartment,
                      start_time,
-                     initial_states_agent, initial_states_compartment):
+                     initial_states_agent, initial_states_compartment,
+                     use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Project population sizes from start time to end of beta.index
     
     Parameters
@@ -69,11 +82,14 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
     start_time : pd.Timestamp
     initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
-    
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
+
     Results
     -------
     returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
-    and rows for each day of projection
+    as well as new infections, and rows for each day of projection
     """
     df_agent_count_list, df_compartment_count_list = [], []
 
@@ -108,7 +124,10 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                                         df_compartment.loc[t],
                                         beta_agent=beta_agent.loc[t, draw],
                                         beta_compartment=beta_compartment.loc[t, draw],
-                                        mixing_parameter=mixing_parameter, **params[draw])
+                                        mixing_parameter=mixing_parameter,
+                                        use_mechanistic_testing=use_mechanistic_testing,
+                                        test_rate=test_rate, test_positive_rate=test_positive_rate,
+                                        **params[draw])
 
         # store last day of counts from the agent states
         df_individual_counts.loc[df_individual_counts.index[-1]] = df_individual.covid_state.value_counts()
