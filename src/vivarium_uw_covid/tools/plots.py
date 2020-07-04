@@ -74,7 +74,7 @@ def plot_medians_at_end_of_quarter(results, close_date, xlabel):
         
         
     plt.errorbar(xx, yy, yerr=[yy_lb, yy_ub], marker='o', linestyle='-')
-    plt.ylabel(f"Median cumulative infections on {close_date.strftime('%D')}")
+    plt.ylabel(f"Cumulative infections on {close_date.strftime('%D')}")
     plt.xlabel(xlabel)
     plt.grid()
     plt.axis(ymin=0)

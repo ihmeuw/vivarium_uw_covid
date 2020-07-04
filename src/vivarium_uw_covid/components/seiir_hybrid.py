@@ -91,6 +91,8 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
     returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
     as well as new infections, and rows for each day of projection
     """
+    assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
+
     df_agent_count_list, df_compartment_count_list = [], []
 
     days = beta_agent.loc[start_time:].index
