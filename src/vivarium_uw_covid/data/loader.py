@@ -220,6 +220,21 @@ def load_seiir_params(run_dir, theta):
     return params
 
 
+def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
+    # TODO: docstring
+    df_covs = load_covariates(cov_dir)
+    coeffs = load_effect_coefficients(run_dir, loc_id)
+    beta_fit = load_beta_fit(run_dir, loc_id)
+
+    initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
+    # TODO: get a composite initial state by mixing initial states from multiple locations
+
+    # extract theta from initial states
+    theta = initial_states.theta.mean()
+    assert initial_states.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
+    params = load_seiir_params(run_dir, theta)
+    return locals()
+
 
 def get_entity(key: str):
     # Map of entity types to their gbd mappings.

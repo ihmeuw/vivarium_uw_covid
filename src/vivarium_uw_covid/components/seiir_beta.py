@@ -149,3 +149,10 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
         alt_covs.loc[start_time:, cov] = val
 
     return alt_covs
+
+
+def make_beta(coeffs, df_covs, loc_id, beta_fit):
+    ### TODO: docstring
+    beta_pred = beta_predict(coeffs, df_covs[df_covs.location_id == loc_id])
+    beta_final = beta_finalize(beta_pred, beta_fit)
+    return beta_final
