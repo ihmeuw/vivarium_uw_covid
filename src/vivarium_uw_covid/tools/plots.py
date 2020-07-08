@@ -1,5 +1,26 @@
 import numpy as np, matplotlib.pyplot as plt, pandas as pd
 
+def hop_plot(df_count_list, ymax=0, title='', metric='new_infections'):
+    from IPython.display import clear_output
+    from time import sleep
+    
+    try:
+        while True:
+            plot_results(df_count_list[:100], ymax, title, metric)
+            df = df_count_list[np.random.choice(range(len(df_count_list)))]
+            if metric == 'new_infections':
+                s = df.new_infections
+            elif metric == 'cumulative_infections':
+                s = df.new_infections.cumsum()
+            else:
+                assert 0, f'metric "{metric}" not recognized'
+            s.plot(color='C0', alpha=1, linewidth=5)
+
+            clear_output(wait=True)
+            plt.show()
+    except KeyboardInterrupt:
+        pass
+
 def plot_results(df_count_list, ymax=0, title='', metric='new_infections'):
     plt.figure(figsize=(11, 4.25), dpi=120)
 
@@ -42,7 +63,7 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections'):
     # TODO: draw a line for when it ends, and note the metric values at this point
     #plt.plot([end_date, end_date], [0, ymax], 'k:')
     summary_result_str = f"\n{metric.replace('_', ' ').capitalize()} on {end_date.strftime('%D')}:\n    {end_median:,.0f} (95% UI {end_lb:,.0f} to {end_ub:,.0f})"
-    print(summary_result_str)
+#    print(summary_result_str)
     plt.text(s.index[0], ymax, summary_result_str, ha='left', va='top')
     plt.axis(ymin=0, ymax=ymax)
     plt.title(title)
