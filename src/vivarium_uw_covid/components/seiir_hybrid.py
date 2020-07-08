@@ -62,6 +62,78 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
                                                 use_mechanistic_testing, test_rate, test_positive_rate)
                
 
+def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
+                         beta_agent, beta_compartment,
+                         start_time,
+                         initial_states_agent, initial_states_compartment,
+                         use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
+    """Project population sizes from start time to end of beta.index
+    
+    Parameters
+    ----------
+    draws : int
+    n_simulants : int
+    mixing_parameter : float >= 0 and <= 1, signifying the fraction of time the
+                       agents spend with the outside population (vs with other agents)
+    params : dict-of-dicts, where draw maps to dict with values for 
+                alpha, gamma1, gamma2, sigma, theta : float
+    beta_agent : pd.DataFrame with index of dates and columns for draws
+    beta_compartment : pd.DataFrame with index of dates and columns for draws
+    start_time : pd.Timestamp
+    initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
+
+    Results
+    -------
+    returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
+    as well as new infections, and rows for each day of projection
+    """
+
+    states = ['S', 'E', 'I1', 'I2', 'R']
+    days = beta_agent.loc[start_time:].index
+
+    ## initialize population table for individual-based model
+    df_individual = pd.DataFrame(index=range(n_simulants))
+    df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states_agent.loc[draw])
+
+    ## initialize counts table for inidividual and compartmental models
+    df_individual_counts = pd.DataFrame(index=days, columns=states + ['new_infections'])
+
+    df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
+    #### initialize compartmental model state sizes for time zero
+    for state in states:
+        df_compartment.loc[start_time, state] = initial_states_compartment.loc[draw, state]
+
+
+    ## step through hybrid simulation
+    dt = pd.Timedelta(days=1)
+    for t in df_individual_counts.index[:-1]:
+        df_individual_counts.loc[t] = df_individual.covid_state.value_counts()
+
+        df_compartment.loc[t+dt] = compartmental_hybrid_step(
+                                        df_compartment.loc[t], df_individual_counts.loc[t],
+                                        beta=beta_compartment.loc[t, draw],
+                                        mixing_parameter=mixing_parameter, **params[draw])
+
+        df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual,
+                                    df_compartment.loc[t],
+                                    beta_agent=beta_agent.loc[t, draw],
+                                    beta_compartment=beta_compartment.loc[t, draw],
+                                    mixing_parameter=mixing_parameter,
+                                    use_mechanistic_testing=use_mechanistic_testing,
+                                    test_rate=test_rate, test_positive_rate=test_positive_rate,
+                                    **params[draw])
+
+    # store last day of counts from the agent states
+    df_individual_counts.loc[df_individual_counts.index[-1]] = df_individual.covid_state.value_counts()
+
+    return df_individual_counts, df_compartment
+
+
+
 def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                      beta_agent, beta_compartment,
                      start_time,
@@ -95,48 +167,71 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     df_agent_count_list, df_compartment_count_list = [], []
 
-    days = beta_agent.loc[start_time:].index
-    states = ['S', 'E', 'I1', 'I2', 'R']
-
     for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
-        ## initialize population table for individual-based model
-        df_individual = pd.DataFrame(index=range(n_simulants))
-        df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states_agent.loc[draw])
+        
+        df_individual_counts, df_compartment = run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
+                                                                    beta_agent, beta_compartment,
+                                                                    start_time,
+                                                                    initial_states_agent, initial_states_compartment,
+                                                                    use_mechanistic_testing, test_rate, test_positive_rate)
 
-        ## initialize counts table for inidividual and compartmental models
-        df_individual_counts = pd.DataFrame(index=days, columns=states + ['new_infections'])
-
-        df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
-        #### initialize compartmental model state sizes for time zero
-        for state in states:
-            df_compartment.loc[start_time, state] = initial_states_compartment.loc[draw, state]
-
-
-        ## step through hybrid simulation
-        dt = pd.Timedelta(days=1)
-        for t in df_individual_counts.index[:-1]:
-            df_individual_counts.loc[t] = df_individual.covid_state.value_counts()
-
-            df_compartment.loc[t+dt] = compartmental_hybrid_step(
-                                            df_compartment.loc[t], df_individual_counts.loc[t],
-                                            beta=beta_compartment.loc[t, draw],
-                                            mixing_parameter=mixing_parameter, **params[draw])
-
-            df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual,
-                                        df_compartment.loc[t],
-                                        beta_agent=beta_agent.loc[t, draw],
-                                        beta_compartment=beta_compartment.loc[t, draw],
-                                        mixing_parameter=mixing_parameter,
-                                        use_mechanistic_testing=use_mechanistic_testing,
-                                        test_rate=test_rate, test_positive_rate=test_positive_rate,
-                                        **params[draw])
-
-        # store last day of counts from the agent states
-        df_individual_counts.loc[df_individual_counts.index[-1]] = df_individual.covid_state.value_counts()
 
         # append the counts to their lists
         df_agent_count_list.append(df_individual_counts)
         df_compartment_count_list.append(df_compartment)
                
     return df_agent_count_list, df_compartment_count_list
+
+
+def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
+                     beta_agent, beta_compartment,
+                     start_time,
+                     initial_states_agent, initial_states_compartment,
+                     use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
+    """Project population sizes from start time to end of beta.index
+    
+    Parameters
+    ----------
+    n_draws : int
+    n_simulants : int
+    mixing_parameter : float >= 0 and <= 1, signifying the fraction of time the
+                       agents spend with the outside population (vs with other agents)
+    params : dict-of-dicts, where draw maps to dict with values for 
+                alpha, gamma1, gamma2, sigma, theta : float
+    beta_agent : pd.DataFrame with index of dates and columns for draws
+    beta_compartment : pd.DataFrame with index of dates and columns for draws
+    start_time : pd.Timestamp
+    initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
+
+    Results
+    -------
+    returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
+    as well as new infections, and rows for each day of projection
+    """
+    from dask import delayed, compute
+
+    assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
+
+    df_agent_count_list, df_compartment_count_list = [], []
+
+    for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
+        
+        df_tuple = delayed(run_one_hybrid_model)(draw, n_simulants, mixing_parameter, params,
+                                                 beta_agent, beta_compartment,
+                                                 start_time,
+                                                 initial_states_agent, initial_states_compartment,
+                                                 use_mechanistic_testing, test_rate, test_positive_rate)
+
+
+        # append the counts to their lists
+        df_agent_count_list.append(df_tuple[0])
+        df_compartment_count_list.append(df_tuple[1])
+               
+    return compute(df_agent_count_list, df_compartment_count_list)
+
+
 
