@@ -16,9 +16,15 @@ df_fac_staff['p'] = df_fac_staff.value / df_fac_staff.value.sum()
 
 rate_dir = '2020_06_29.01'
 df = pd.read_csv(f'/ihme/covid-19/rates/{rate_dir}/ifr_preds_1yr.csv')
-f_ifr_ = scipy.interpolate.interp1d(df.age_mid.values, pm.invlogit(df.lowest_ifr), kind='linear', fill_value='extrapolate')
-f_ifr = {'male': f_ifr_,  # TODO: include sex ratio
-         'female': f_ifr_,
+def f_ifr_factory(logit_shift):
+    return scipy.interpolate.interp1d(df.age_mid.values,
+                                      pm.invlogit(df.lowest_ifr+logit_shift),
+                                      kind='linear', fill_value='extrapolate')
+
+# logit_shift value from Reed,
+# https://ihme.slack.com/archives/C0138B6810W/p1594319840211400?thread_ts=1594236461.208800&cid=C0138B6810W
+f_ifr = {'male': f_ifr_factory(+0.305),
+         'female': f_ifr_factory(-0.305),
      }
 
 
@@ -86,7 +92,7 @@ def sample_covid_deaths(df):
     return (np.random.uniform(size=len(df)) <= ifr)
 
 
-def generate_covid_deaths(df_list, end_date):
+def generate_covid_deaths(df_list, end_date, student_frac):
     """Generate estimated cumulative count of individuals to die from COVID
     for each simulation output on selected date
 
@@ -94,6 +100,8 @@ def generate_covid_deaths(df_list, end_date):
     ----------
     df_list : list of pd.DataFrames with a row for each day of sim, and 
     a column "R" for the removed individuals
+    end_date : pd.Timestamp in index of dataframes in df_list, to be used for end date of cumulative count
+    student_frac : float in interval (0,1), to be used for mix of student/non-students
 
     Results
     -------
@@ -101,8 +109,9 @@ def generate_covid_deaths(df_list, end_date):
     """
     deaths = []
     for df in df_list:
-        n_infected = df.loc[end_date, 'R']
-        n_fac_staff, n_student = int(np.floor(n_infected/2)), int(np.ceil(n_infected/2))
+        n_infected = int(np.round(df.loc[end_date, 'R']))
+        n_student = np.random.binomial(n_infected, student_frac)
+        n_fac_staff = n_infected - n_student
         df_ages = initialize_age_and_sex(n_fac_staff, n_student)
         s_death = sample_covid_deaths(df_ages)
         
