@@ -138,7 +138,8 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
     start_time : pd.Timestamp
     alt_cov_values : covariate names and new values, which can be floats, array-like, or pd.Series,
                      e.g. testing_reference=0.005, mask_use=1.0 to create a scenario with high mask
-                     use and high testing
+                     use and high testing; if name starts with "delta_" then add to value, instead
+                     of replacing it
     Results
     -------
     returns pd.DataFrame with columns for covariates,
@@ -146,7 +147,11 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
     """
     alt_covs = df_covs[df_covs.location_id == loc_id].copy()
     for cov, val in alt_cov_values.items():
-        alt_covs.loc[start_time:, cov] = val
+        if cov.startswith('delta_'):
+            cov = cov.replace('delta_', '')
+            alt_covs.loc[start_time:, cov] += val
+        else:
+            alt_covs.loc[start_time:, cov] = val
 
     return alt_covs
 
