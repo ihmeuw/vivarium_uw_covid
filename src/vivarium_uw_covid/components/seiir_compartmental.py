@@ -41,7 +41,7 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     assert theta >= 0, 'only handle theta >= 0 for now'
     pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta) / n_simulants) ### * .85)  # FIXME: why does *.85 help??
     dS = np.random.binomial(s0.S, pr_infected)
-    s1.new_infections = dS
+    s1.n_new_infections = dS
     s1.S -= dS
     s1.E += dS
 
@@ -82,7 +82,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
     and rows for each day of projection
     """
     days = beta.loc[start_time:].index
-    compartments = ['S', 'E', 'I1', 'I2', 'R', 'new_infections']
+    compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
     
     df_count_list = []
     for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
@@ -90,7 +90,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
 
         # initialize states from IHME Projection for time zero
         for state in compartments:
-            if state != 'new_infections':
+            if state != 'n_new_infections':
                 df_i.loc[start_time, state] = initial_states.loc[draw, state]
         df_i.loc[start_time] *= n_simulants / df_i.loc[start_time].sum()  # rescale to have requested number of simulants
     

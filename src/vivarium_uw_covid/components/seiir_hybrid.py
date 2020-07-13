@@ -102,7 +102,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
     ## initialize counts table for inidividual and compartmental models
     df_individual_counts = pd.DataFrame(index=days, columns=states + ['n_new_infections', 'n_new_isolations'])
 
-    df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
+    df_compartment = pd.DataFrame(index=days, columns=states + ['n_new_infections'])
     #### initialize compartmental model state sizes for time zero
     for state in states:
         df_compartment.loc[start_time, state] = initial_states_compartment.loc[draw, state]
