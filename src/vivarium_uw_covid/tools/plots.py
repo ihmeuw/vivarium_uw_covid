@@ -21,7 +21,7 @@ def hop_plot(df_count_list, ymax=0, title='', metric='new_infections'):
     except KeyboardInterrupt:
         pass
 
-def plot_results(df_count_list, ymax=0, title='', metric='new_infections'):
+def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_date='2020-12-11'):
     plt.figure(figsize=(11, 4.25), dpi=120)
 
     s_list = []
@@ -38,7 +38,7 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections'):
         s.plot(color='k', alpha=.25)
         s_list.append(s)
 
-    end_date = pd.Timestamp('2020-12-11')
+    end_date = pd.Timestamp(end_date)
     
     s = pd.Series(np.median(s_list, axis=0), index=s.index)
     s.plot(color='k', linewidth=3, linestyle='-')
