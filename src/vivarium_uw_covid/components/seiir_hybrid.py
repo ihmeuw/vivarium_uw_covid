@@ -100,7 +100,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
     df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states_agent.loc[draw])
 
     ## initialize counts table for inidividual and compartmental models
-    df_individual_counts = pd.DataFrame(index=days, columns=states + ['new_infections'])
+    df_individual_counts = pd.DataFrame(index=days, columns=states + ['n_new_infections', 'n_new_isolations'])
 
     df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
     #### initialize compartmental model state sizes for time zero
@@ -117,7 +117,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                         df_compartment.loc[t], df_individual_counts.loc[t],
                                         beta=beta_compartment.loc[t, draw],
                                         mixing_parameter=mixing_parameter, **params[draw])
-
+        
         df_individual_counts.loc[t+dt] = individual_hybrid_step(df_individual,
                                     df_compartment.loc[t],
                                     beta_agent=beta_agent.loc[t, draw],
@@ -126,7 +126,6 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                     use_mechanistic_testing=use_mechanistic_testing,
                                     test_rate=test_rate, test_positive_rate=test_positive_rate,
                                     **params[draw])
-
     return df_individual_counts, df_compartment
 
 

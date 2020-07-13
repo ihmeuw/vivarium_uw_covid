@@ -83,7 +83,7 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
             else:
                 pr_tested = 1 - np.exp(-test_rate_among_infected)
     
-            rows = (df.covid_state != 'S') & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
+            rows = (df.covid_state.isin(['I1', 'I2'])) & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
             df.loc[rows, 'covid_state'] = 'R'  # move any non-S state individual to state R if they are tested (FIXME: too simple)
             n_new_isolations = np.sum(rows)
 

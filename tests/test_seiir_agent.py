@@ -27,6 +27,6 @@ def test_run_agent_model():
                                       start_time=t0, initial_states=initial_states)
 
     assert len(df_list) == n_draws
-    for state in ['S', 'E', 'I1', 'I2', 'R']:
+    for state in ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations']:
         assert state in df_list[0].columns, f'expect column for state "{state}"'
 

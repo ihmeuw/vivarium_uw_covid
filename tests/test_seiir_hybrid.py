@@ -29,7 +29,7 @@ def test_run_hybrid_model():
                                             initial_states_compartment=initial_states)
 
     assert len(df_list_1) == n_draws
-    for state in ['S', 'E', 'I1', 'I2', 'R']:
+    for state in ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations']:
         assert state in df_list_1[0].columns, f'expect column for state "{state}"'
 
 def test_run_hybrid_model_w_testing():
@@ -46,6 +46,6 @@ def test_run_hybrid_model_w_testing():
                                             test_positive_rate=0.05)
 
     assert len(df_list_1) == n_draws
-    for state in ['S', 'E', 'I1', 'I2', 'R']:
+    for state in ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations']:
         assert state in df_list_1[0].columns, f'expect column for state "{state}"'
 
