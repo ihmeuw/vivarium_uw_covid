@@ -100,7 +100,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
     df_individual['covid_state'] = agent_covid_initial_states(n_simulants, initial_states_agent.loc[draw])
 
     ## initialize counts table for inidividual and compartmental models
-    df_individual_counts = pd.DataFrame(index=days, columns=states + ['new_infections'])
+    df_individual_counts = pd.DataFrame(index=days, columns=states + ['n_new_infections', 'n_new_isolations'])
 
     df_compartment = pd.DataFrame(index=days, columns=states + ['new_infections'])
     #### initialize compartmental model state sizes for time zero
@@ -110,15 +110,15 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
 
     ## step through hybrid simulation
     dt = pd.Timedelta(days=1)
+    df_individual_counts.iloc[0] = df_individual.covid_state.value_counts()
     for t in df_individual_counts.index[:-1]:
-        df_individual_counts.loc[t] = df_individual.covid_state.value_counts()
 
         df_compartment.loc[t+dt] = compartmental_hybrid_step(
                                         df_compartment.loc[t], df_individual_counts.loc[t],
                                         beta=beta_compartment.loc[t, draw],
                                         mixing_parameter=mixing_parameter, **params[draw])
-
-        df_individual_counts.loc[t, 'new_infections'] = individual_hybrid_step(df_individual,
+        
+        df_individual_counts.loc[t+dt] = individual_hybrid_step(df_individual,
                                     df_compartment.loc[t],
                                     beta_agent=beta_agent.loc[t, draw],
                                     beta_compartment=beta_compartment.loc[t, draw],
@@ -126,10 +126,6 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                     use_mechanistic_testing=use_mechanistic_testing,
                                     test_rate=test_rate, test_positive_rate=test_positive_rate,
                                     **params[draw])
-
-    # store last day of counts from the agent states
-    df_individual_counts.loc[df_individual_counts.index[-1]] = df_individual.covid_state.value_counts()
-
     return df_individual_counts, df_compartment
 
 

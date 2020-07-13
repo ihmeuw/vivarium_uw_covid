@@ -67,10 +67,11 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     pr_S_to_E = 1 - np.exp(-infection_rate)
     rows = (df.covid_state == 'S') & (uniform_random_draw < pr_S_to_E)
     df.loc[rows, 'covid_state'] = 'E'
-    new_infections = np.sum(rows)
+    n_new_infections = np.sum(rows)
 
     #### code for mechanistic testing-and-isolation model
     #### TODO: refactor into a separate Vivarium component
+    n_new_isolations = 0
     if use_mechanistic_testing:
         n_test_positive = test_rate * test_positive_rate * len(df)
         n_infected = ((df.covid_state == 'E') | (df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
@@ -82,11 +83,15 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
             else:
                 pr_tested = 1 - np.exp(-test_rate_among_infected)
     
-            rows = (df.covid_state != 'S') & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
+            rows = (df.covid_state.isin(['I1', 'I2'])) & (np.random.uniform(size=len(df)) < pr_tested)  # FIXME: detected too soon?
             df.loc[rows, 'covid_state'] = 'R'  # move any non-S state individual to state R if they are tested (FIXME: too simple)
+            n_new_isolations = np.sum(rows)
 
-
-    return new_infections
+    s_result = pd.Series(df.covid_state.value_counts(), index=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
+    s_result = s_result.fillna(0)
+    s_result['n_new_infections'] = n_new_infections
+    s_result['n_new_isolations'] = n_new_isolations
+    return s_result
 
 
 def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states):
@@ -113,12 +118,10 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
         df = pd.DataFrame(index=range(n_simulants))
         df['covid_state'] = agent_covid_initial_states(n_simulants, initial_states.loc[draw])
 
-        df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'new_infections'])
-        for t in df_counts.index[:-1]:
-            df_counts.loc[t] = df.covid_state.value_counts()
-            df_counts.loc[t, 'new_infections'] = agent_covid_step(df, beta=beta.loc[t, draw], **params[draw])
-
-        df_counts.loc[df_counts.index[-1]] = df.covid_state.value_counts()
+        df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
+        df_counts.iloc[0] = df.covid_state.value_counts()
+        for t in df_counts.index[1:]:
+            df_counts.loc[t] = agent_covid_step(df, beta=beta.loc[t, draw], **params[draw])
 
         df_count_list.append(df_counts)
 
