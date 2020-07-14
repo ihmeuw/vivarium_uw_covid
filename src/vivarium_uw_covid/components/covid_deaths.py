@@ -110,7 +110,7 @@ def sample_covid_deaths(df, f_ifr):
     return (np.random.uniform(size=len(df)) <= ifr)
 
 
-def generate_covid_deaths(df_fac_staff, f_ifr, df_list, end_date, student_frac):
+def generate_covid_deaths(df_fac_staff, df_ifr, df_list, end_date, student_frac):
     """Generate estimated cumulative count of individuals to die from COVID
     for each simulation output on selected date
 
@@ -125,6 +125,8 @@ def generate_covid_deaths(df_fac_staff, f_ifr, df_list, end_date, student_frac):
     -------
     returns a pd.Series of death counts
     """
+    f_ifr = initialize_ifr(df_ifr)
+
     deaths = []
     for df in df_list:
         n_infected = int(np.round(df.loc[end_date, 'R']))

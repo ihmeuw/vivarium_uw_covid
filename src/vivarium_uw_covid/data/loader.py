@@ -220,7 +220,7 @@ def load_seiir_params(run_dir, theta):
     return params
 
 
-def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
+def load_covid_projection_data(cov_dir, run_dir, rates_dir, loc_id, t0):
     """Load all data necessary for covid projections in a
     single location
     
@@ -230,6 +230,8 @@ def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
               e.g. '2020_06_23.03.01'
     run_dir : str, a directory in $SEIIR_DIR/regression/,
               e.g. '2020_06_23.07'
+    rates_dir : str, a directory in $RATES_DIR/,
+              e.g. '2020_06_29.01'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     start_date : pd.Timestamp, e.g. pd.Timestamp('2020-09-01')
@@ -249,6 +251,9 @@ def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
     theta = initial_states.theta.mean()
     assert initial_states.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
     params = load_seiir_params(run_dir, theta)
+
+    df_fac_staff = load_uw_fac_staff_ages()
+    df_ifr = load_ifr(rates_dir)
     return locals()
 
 
