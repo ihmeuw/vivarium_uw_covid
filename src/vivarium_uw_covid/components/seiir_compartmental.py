@@ -16,7 +16,7 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     s0 : pd.Series with counts for S, E, I1, I2, and R
     n_simulants : float
     n_infections : float
-    alpha, beta, gamma1, gamma2, sigma, theta : float
+    alpha, beta, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
     
     Results
     -------
@@ -39,7 +39,7 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     s1 = s0.copy()
 
     assert theta >= 0, 'only handle theta >= 0 for now'
-    pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta) / n_simulants) ### * .85)  # FIXME: why does *.85 help??
+    pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta) / n_simulants)
     dS = np.random.binomial(s0.S, pr_infected)
     s1.n_new_infections = dS
     s1.S -= dS

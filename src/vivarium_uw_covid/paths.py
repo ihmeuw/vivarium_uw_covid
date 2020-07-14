@@ -9,3 +9,5 @@ MODEL_SPEC_DIR = BASE_DIR / 'model_specifications'
 RESULTS_ROOT = Path(f'/share/costeffectiveness/results/{project_globals.PROJECT_NAME}/')
 
 SEIIR_DIR = '/ihme/covid-19/seir-pipeline-outputs'
+RATES_DIR = '/ihme/covid-19/rates'
+UW_DATA_DIR = '/home/j/Project/simulation_science/covid/data'

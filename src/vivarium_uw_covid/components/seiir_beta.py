@@ -157,7 +157,23 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
 
 
 def make_beta(coeffs, df_covs, loc_id, beta_fit):
-    ### TODO: docstring
+    """Create alternative scenario beta(t) values for specified location
+        
+    Parameters
+    ----------
+    coeffs : pd.DataFrame with columns for covariates and rows for draws
+             e.g. the output of load_effect_coefficients
+    df_covs : pd.DataFrame with columns for covariates and rows for each
+              time, e.g the output of load_covariates
+    loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
+             /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
+    beta_fit : dict of pd.DataFrames with columns for beta and date,
+               e.g the output of load_beta_fit
+    Results
+    -------
+    returns pd.DataFrame of final beta values, with columns for each draw,
+    and rows for each day
+    """
     beta_pred = beta_predict(coeffs, df_covs[df_covs.location_id == loc_id])
     beta_final = beta_finalize(beta_pred, beta_fit)
     return beta_final

@@ -8,31 +8,49 @@ Date: 2020-07-08
 import numpy as np, pandas as pd
 import scipy.interpolate, pymc as pm
 
+def f_ifr_factory(df_ifr, logit_shift):
+    """Create age-interpolating IFR function
 
-# TODO: refactor this into loader.py
-dir_name = '/home/j/Project/simulation_science/covid/data'
-df_fac_staff = pd.read_csv(f'{dir_name}/uw_staff_age_sex_counts.csv')
-df_fac_staff['p'] = df_fac_staff.value / df_fac_staff.value.sum()
+    Parameters
+    ----------
+    df_ifr : pd.DataFrame with columns for age_mid, lowest_ifr
+    logit_shift : float, shift of value in logit-space
 
-rate_dir = '2020_06_29.01'
-df = pd.read_csv(f'/ihme/covid-19/rates/{rate_dir}/ifr_preds_1yr.csv')
-def f_ifr_factory(logit_shift):
-    return scipy.interpolate.interp1d(df.age_mid.values,
-                                      pm.invlogit(df.lowest_ifr+logit_shift),
+    Results
+    -------
+    returns function that maps from age to IFR
+    """
+    return scipy.interpolate.interp1d(df_ifr.age_mid.values,
+                                      pm.invlogit(df_ifr.lowest_ifr+logit_shift),
                                       kind='linear', fill_value='extrapolate')
 
-# logit_shift value from Reed,
-# https://ihme.slack.com/archives/C0138B6810W/p1594319840211400?thread_ts=1594236461.208800&cid=C0138B6810W
-f_ifr = {'male': f_ifr_factory(+0.305),
-         'female': f_ifr_factory(-0.305),
-     }
+def initialize_ifr(df_ifr):
+    """Create sex-specific IFR age-interpolation functions
+    
+    Parameters
+    ----------
+    df_ifr : pd.DataFrame with columns for age_mid and lowest_ifr
+
+    Results
+    -------
+    returns dict with keys male and female and values that are functions from age to IFR
+    """
+
+    # logit_shift value from Reed,
+    # https://ihme.slack.com/archives/C0138B6810W/p1594319840211400?thread_ts=1594236461.208800&cid=C0138B6810W
+    f_ifr = {'male': f_ifr_factory(df_ifr, +0.305),
+             'female': f_ifr_factory(df_ifr, -0.305),
+         }
+
+    return f_ifr
 
 
-def initialize_age_and_sex(n_fac_staff, n_student):
+def initialize_age_and_sex(df_fac_staff, n_fac_staff, n_student):
     """Create age and sex columns for a population table
 
     Parameters
     ----------
+    df_fac_staff : pd.DataFrame with columns age_start, age_end, sex, and 'p' (proportion in this strata)
     n_fac_staff : int, number of faculty/staff to include in the population
     n_students : int, number of students to include in the population
 
@@ -55,7 +73,7 @@ def initialize_age_and_sex(n_fac_staff, n_student):
     return pd.concat([df1, df2]).reset_index(drop=True)
 
 
-def calculate_ifr(df):
+def calculate_ifr(df, f_ifr):
     """Calculate the infection fatality ratio (IFR)
     for each person in the population table
 
@@ -75,7 +93,7 @@ def calculate_ifr(df):
     return ifr
 
 
-def sample_covid_deaths(df):
+def sample_covid_deaths(df, f_ifr):
     """Determine which individuals die from COVID
     for each person in the population table
 
@@ -88,11 +106,11 @@ def sample_covid_deaths(df):
     returns a pd.Series of boolean values (True means the individual died due to COVID)
     """
 
-    ifr = calculate_ifr(df)
+    ifr = calculate_ifr(df, f_ifr)
     return (np.random.uniform(size=len(df)) <= ifr)
 
 
-def generate_covid_deaths(df_list, end_date, student_frac):
+def generate_covid_deaths(df_fac_staff, f_ifr, df_list, end_date, student_frac):
     """Generate estimated cumulative count of individuals to die from COVID
     for each simulation output on selected date
 
@@ -112,8 +130,8 @@ def generate_covid_deaths(df_list, end_date, student_frac):
         n_infected = int(np.round(df.loc[end_date, 'R']))
         n_student = np.random.binomial(n_infected, student_frac)
         n_fac_staff = n_infected - n_student
-        df_ages = initialize_age_and_sex(n_fac_staff, n_student)
-        s_death = sample_covid_deaths(df_ages)
+        df_ages = initialize_age_and_sex(df_fac_staff, n_fac_staff, n_student)
+        s_death = sample_covid_deaths(df_ages, f_ifr)
         
         deaths.append(s_death.sum())
     return pd.Series(deaths)

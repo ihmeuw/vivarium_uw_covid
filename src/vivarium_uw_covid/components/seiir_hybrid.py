@@ -17,7 +17,10 @@ def compartmental_hybrid_step(s_compartment, s_agent, mixing_parameter, **params
     ----------
     s_compartment : counts for compartmental part
     s_agent : counts for individual part
-    addl params : transmission parameters (alpha, beta, gamma1, gamma2, sigma, theta)
+    mixing_parameter : float, 0 <= mixing_parameter <= 1, to control how much
+                       mixing there is between the compartmental outbreak and
+                       the agent outbreak
+    params : transmission parameters (alpha, beta, gamma1, gamma2, sigma, theta)
 
     Results
     -------
@@ -42,10 +45,10 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
 
     Parameters
     ----------
-    TODO: additional docstring parameters
     df : population table for individuals
     s_compartment : compartment sizes for outside population
-    addl parameters : transmission parameters
+    infection_rate : float, 0 <= infection_rate < 1
+    alpha, beta_agent, beta_compartment, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
     use_mechanistic_testing : bool
     test_rate : tests per person per day
     test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
@@ -156,8 +159,9 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     Results
     -------
-    returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
-    as well as new infections, and rows for each day of projection
+    returns two lists of pd.DataFrames with columns for counts for S, E, I1, I2, and R
+    as well as new infections, and rows for each day of projection; first list is for
+    agent counts, and second list is for compartment counts
     """
     assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
 
@@ -205,8 +209,9 @@ def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     Results
     -------
-    returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
-    as well as new infections, and rows for each day of projection
+    returns two lists of pd.DataFrames with columns for counts for S, E, I1, I2, and R
+    as well as new infections, and rows for each day of projection; first list is for
+    agent counts, and second list is for compartment counts
     """
     from dask import delayed, compute
 

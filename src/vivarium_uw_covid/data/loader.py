@@ -101,7 +101,7 @@ def _load_em_from_meid(location, meid, measure):
     return utilities.sort_hierarchical_data(data)
 
 
-from ..paths import SEIIR_DIR
+from ..paths import SEIIR_DIR, RATES_DIR, UW_DATA_DIR
 
 def load_covariates(cov_dir):
     """Load all covariate values
@@ -221,7 +221,23 @@ def load_seiir_params(run_dir, theta):
 
 
 def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
-    # TODO: docstring
+    """Load all data necessary for covid projections in a
+    single location
+    
+    Parameters
+    ----------
+    cov_dir : str, a directory in $SEIIR_DIR/covariate/,
+              e.g. '2020_06_23.03.01'
+    run_dir : str, a directory in $SEIIR_DIR/regression/,
+              e.g. '2020_06_23.07'
+    loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
+             /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
+    start_date : pd.Timestamp, e.g. pd.Timestamp('2020-09-01')
+    
+    Results
+    -------
+    returns dict of data (mostly pd.DataFrames, but also some dict-of-dicts)
+    """
     df_covs = load_covariates(cov_dir)
     coeffs = load_effect_coefficients(run_dir, loc_id)
     beta_fit = load_beta_fit(run_dir, loc_id)
@@ -234,6 +250,35 @@ def load_covid_projection_data(cov_dir, run_dir, loc_id, t0):
     assert initial_states.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
     params = load_seiir_params(run_dir, theta)
     return locals()
+
+
+def load_uw_fac_staff_ages():
+    """Load age/sex distribution for UW faculty and staff
+    
+    Results
+    -------
+    returns pd.DataFrame with columns for age_start, age_end, sex, and proportion ('p')
+    """
+
+    df_fac_staff = pd.read_csv(f'{UW_DATA_DIR}/uw_staff_age_sex_counts.csv')
+    df_fac_staff['p'] = df_fac_staff.value / df_fac_staff.value.sum()
+    return df_fac_staff.filter(['age_start', 'age_end', 'sex', 'p'])
+
+
+def load_ifr(rates_dir):
+    """Load age-specific infection fatality ratio
+
+    Parameters
+    ----------
+    rates_dir : str, a directory in $RATES_DIR/,
+              e.g. '2020_06_29.01'
+    
+    Results
+    -------
+    return pd.DataFrame
+    """
+    df_ifr = pd.read_csv(f'{RATES_DIR}/{rates_dir}/ifr_preds_1yr.csv')
+    return df_ifr
 
 
 def get_entity(key: str):

@@ -13,9 +13,13 @@ def agent_covid_initial_states(n_simulants, compartment_sizes):
     
     Parameters
     ----------
-    
     n_simulants : int
     compartment_sizes : dict_like, with numbers keyed by S, E, I1, I2, R
+
+    Results
+    -------
+    returns np.array with .shape == (n_simulants,) and values S, E, I1, I2, and R
+    chosen randomly with expected fractions matching compartment_sizes
     """
     state_list = ['S', 'E', 'I1', 'I2', 'R']
     
@@ -28,6 +32,19 @@ def agent_covid_initial_states(n_simulants, compartment_sizes):
 
 
 def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
+    """Make one step for agent-based model
+
+    Parameters
+    ----------
+    df : pd.DataFrame of population table for agents: each row is an individual,
+         and column 'covid_state' indicates which individuals are S, E, I1, I2, and R
+    alpha, beta, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
+
+    Results
+    -------
+    updates the population table based on one day of infectious disease dynamics,
+    returns number of agents in each state after one step
+    """
     n_infectious = ((df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
     n_simulants = len(df)
     infection_rate = (beta * n_infectious**alpha + theta) / n_simulants
@@ -36,18 +53,22 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
 
 def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
                                          use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
-    """Make one step for agent-based model
+    """Make one step for agent-based model, after infection rate has been calculated
 
     Parameters
     ----------
-    TODO: additional docstring parameters
+    df : pd.DataFrame of population table for agents: each row is an individual,
+         and column 'covid_state' indicates which individuals are S, E, I1, I2, and R
+    infection_rate : float, 0 <= infection_rate < 1
+    alpha, beta, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
     use_mechanistic_testing : bool
     test_rate : tests per person per day
     test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
 
     Results
     -------
-    returns number of agents infected during this time step
+    updates the population table based on one day of infectious disease dynamics,
+    returns number of agents in each state after one step
     """
     uniform_random_draw = np.random.uniform(size=len(df))
 
