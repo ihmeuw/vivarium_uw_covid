@@ -118,9 +118,9 @@ def beta_finalize(beta_pred, beta_fit):
             beta_fit=beta_fit[draw],
             beta_pred=beta_pred.loc[crossover_time:, draw].values, # Peng likes numpy arrays
             draw_id=draw,  # Assuming draw is a string like 'draw_335'
-            window_size=28,
-            average_over_min=1,
-            average_over_max=21
+            window_size=42,
+            average_over_min=7,
+            average_over_max=28
         )
         beta_final.loc[crossover_time:, draw] = s_final
     return beta_final

@@ -35,30 +35,34 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
 
     [1] https://github.com/ihmeuw-msca/ODEOPT/blob/master/src/odeopt/ode/system/nonlinearsys.py#L215-L219
     """
+    substeps=10
+    dt = 1/substeps
+    for i in range(substeps):
+        s1 = s0.copy()
 
-    s1 = s0.copy()
+        assert theta >= 0, 'only handle theta >= 0 for now'
+        pr_infected = 1 - np.exp(-dt*(beta * n_infectious**alpha + theta) / n_simulants)
+        dS = np.random.binomial(s0.S, pr_infected)
+        s1.n_new_infections = dS
+        s1.S -= dS
+        s1.E += dS
 
-    assert theta >= 0, 'only handle theta >= 0 for now'
-    pr_infected = 1 - np.exp(-(beta * n_infectious**alpha + theta) / n_simulants)
-    dS = np.random.binomial(s0.S, pr_infected)
-    s1.n_new_infections = dS
-    s1.S -= dS
-    s1.E += dS
+        pr_E_to_I1 = 1 - np.exp(-dt*sigma)
+        dE = np.random.binomial(s0.E, pr_E_to_I1)
+        s1.E -= dE
+        s1.I1 += dE
 
-    pr_E_to_I1 = 1 - np.exp(-sigma)
-    dE = np.random.binomial(s0.E, pr_E_to_I1)
-    s1.E -= dE
-    s1.I1 += dE
+        pr_I1_to_I2 = 1 - np.exp(-dt*gamma1)
+        dI1 = np.random.binomial(s0.I1, pr_I1_to_I2)
+        s1.I1 -= dI1
+        s1.I2 += dI1
 
-    pr_I1_to_I2 = 1 - np.exp(-gamma1)
-    dI1 = np.random.binomial(s0.I1, pr_I1_to_I2)
-    s1.I1 -= dI1
-    s1.I2 += dI1
+        pr_I2_to_R = 1 - np.exp(-dt*gamma2)
+        dI2 = np.random.binomial(s0.I2, pr_I2_to_R)
+        s1.I2 -= dI2
+        s1.R += dI2
 
-    pr_I2_to_R = 1 - np.exp(-gamma2)
-    dI2 = np.random.binomial(s0.I2, pr_I2_to_R)
-    s1.I2 -= dI2
-    s1.R += dI2
+        s0 = s1.copy()
 
     return s1
 

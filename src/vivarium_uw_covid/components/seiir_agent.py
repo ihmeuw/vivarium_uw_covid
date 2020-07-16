@@ -70,25 +70,29 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     updates the population table based on one day of infectious disease dynamics,
     returns number of agents in each state after one step
     """
-    uniform_random_draw = np.random.uniform(size=len(df))
+    substeps=3
+    dt = 1/substeps
+    n_new_infections = 0
+    for i in range(substeps):
+        uniform_random_draw = np.random.uniform(size=len(df))
 
-    # update from R back to S, to allow in-place computation
-    pr_I2_to_R = 1 - np.exp(-gamma2)
-    rows = (df.covid_state == 'I2') & (uniform_random_draw < pr_I2_to_R)
-    df.loc[rows, 'covid_state'] = 'R'
+        # update from R back to S, to allow in-place computation
+        pr_I2_to_R = 1 - np.exp(-dt*gamma2)
+        rows = (df.covid_state == 'I2') & (uniform_random_draw < pr_I2_to_R)
+        df.loc[rows, 'covid_state'] = 'R'
 
-    pr_I1_to_I2 = 1 - np.exp(-gamma1)
-    rows = (df.covid_state == 'I1') & (uniform_random_draw < pr_I1_to_I2)
-    df.loc[rows, 'covid_state'] = 'I2'
+        pr_I1_to_I2 = 1 - np.exp(-dt*gamma1)
+        rows = (df.covid_state == 'I1') & (uniform_random_draw < pr_I1_to_I2)
+        df.loc[rows, 'covid_state'] = 'I2'
 
-    pr_E_to_I1 = 1 - np.exp(-sigma)
-    rows = (df.covid_state == 'E') & (uniform_random_draw < pr_E_to_I1)
-    df.loc[rows, 'covid_state'] = 'I1'
+        pr_E_to_I1 = 1 - np.exp(-dt*sigma)
+        rows = (df.covid_state == 'E') & (uniform_random_draw < pr_E_to_I1)
+        df.loc[rows, 'covid_state'] = 'I1'
 
-    pr_S_to_E = 1 - np.exp(-infection_rate)
-    rows = (df.covid_state == 'S') & (uniform_random_draw < pr_S_to_E)
-    df.loc[rows, 'covid_state'] = 'E'
-    n_new_infections = np.sum(rows)
+        pr_S_to_E = 1 - np.exp(-dt*infection_rate)
+        rows = (df.covid_state == 'S') & (uniform_random_draw < pr_S_to_E)
+        df.loc[rows, 'covid_state'] = 'E'
+        n_new_infections += np.sum(rows)
 
     #### code for mechanistic testing-and-isolation model
     #### TODO: refactor into a separate Vivarium component

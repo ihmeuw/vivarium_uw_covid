@@ -2,7 +2,7 @@ import numpy as np, pandas as pd
 import vivarium_uw_covid as vuc
 
 df_fac_staff = vuc.load_uw_fac_staff_ages()
-df_ifr = vuc.load_ifr('2020_06_29.01')
+df_ifr = vuc.load_ifr('best')
 
 def test_sample_covid_deaths():
     df = vuc.initialize_age_and_sex(df_fac_staff, n_fac_staff=1_000, n_student=1_000)
