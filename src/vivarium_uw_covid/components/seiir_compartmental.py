@@ -37,13 +37,14 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     """
     substeps=10
     dt = 1/substeps
-    for i in range(substeps):
-        s1 = s0.copy()
 
+    s1 = s0.copy()
+    s1.n_new_infections = 0
+    for i in range(substeps):
         assert theta >= 0, 'only handle theta >= 0 for now'
         pr_infected = 1 - np.exp(-dt*(beta * n_infectious**alpha + theta) / n_simulants)
         dS = np.random.binomial(s0.S, pr_infected)
-        s1.n_new_infections = dS
+        s1.n_new_infections += dS
         s1.S -= dS
         s1.E += dS
 
@@ -63,7 +64,6 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
         s1.R += dI2
 
         s0 = s1.copy()
-
     return s1
 
 
