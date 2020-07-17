@@ -175,6 +175,9 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                                                                     initial_states_agent, initial_states_compartment,
                                                                     use_mechanistic_testing, test_rate, test_positive_rate)
 
+        # record input draw number to aid in code verification
+        df_individual_counts['draw'] = draw
+        df_compartment['draw'] = draw
 
         # append the counts to their lists
         df_agent_count_list.append(df_individual_counts)
