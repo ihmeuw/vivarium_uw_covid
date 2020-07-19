@@ -102,7 +102,7 @@ def beta_finalize(beta_pred, beta_fit):
     ----------
     beta_pred : pd.DataFrame with columns for covariates and rows for draws
                 e.g. the output of beta_predict
-    beta_fit : dict of pd.DataFrames with columns for beta and date,
+    beta_fit : pd.DataFrame with columns for beta and date and draw,
                e.g the output of load_beta_fit
 
     Results
@@ -112,12 +112,12 @@ def beta_finalize(beta_pred, beta_fit):
     """
     assert len(beta_pred.index.unique()) == len(beta_pred.index), 'expect no duplicate values in index of beta_pred'
     beta_final = pd.DataFrame(columns=beta_pred.columns, index=beta_pred.index)
-    crossover_time = pd.Timestamp(beta_fit[0].date.max())
-    for draw in beta_fit.keys():
+    crossover_time = pd.Timestamp(beta_fit.date.max())
+    for draw in beta_fit.draw.unique():
         s_final, scale_params = beta_shift(
-            beta_fit=beta_fit[draw],
+            beta_fit=beta_fit[beta_fit.draw==draw],
             beta_pred=beta_pred.loc[crossover_time:, draw].values, # Peng likes numpy arrays
-            draw_id=draw,  # Assuming draw is a string like 'draw_335'
+            draw_id=draw,
             window_size=42,
             average_over_min=7,
             average_over_max=28
@@ -167,7 +167,7 @@ def make_beta(coeffs, df_covs, loc_id, beta_fit):
               time, e.g the output of load_covariates
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
-    beta_fit : dict of pd.DataFrames with columns for beta and date,
+    beta_fit : pd.DataFrame with columns for beta and date and draw,
                e.g the output of load_beta_fit
     Results
     -------

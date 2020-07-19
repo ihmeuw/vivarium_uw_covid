@@ -19,6 +19,7 @@ from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import interface, utilities, utility_data, globals as vi_globals
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
+from vivarium import Artifact
 from vivarium_uw_covid import paths, globals as project_globals
 
 
@@ -158,13 +159,14 @@ def load_beta_fit(run_dir, loc_id):
     
     Results
     -------
-    returns dict of pd.DataFrames, with key for each draw
+    returns pd.DataFrame formed by appending dataframes for all draws, with column for indicating which draw
     """
-    betas = {}
+    betas = []
     for draw in range(1_000):
         df_fit = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/betas/{loc_id}/fit_draw_{draw}.csv', index_col=0)
-        betas[draw] = df_fit
-    return betas
+        df_fit['draw'] = draw
+        betas.append(df_fit)
+    return pd.concat(betas)
 
 
 def load_seiir_initial_states(run_dir, loc_id, start_date):
@@ -212,6 +214,7 @@ def load_seiir_params(run_dir, theta):
     """
     params = {}
     for draw in range(1_000):
+        draw = str(draw)
         df_params = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/parameters/params_draw_{draw}.csv')
         params[draw] = df_params.set_index('params')['values'].to_dict()
         params[draw].pop('day_shift')  # TODO: find out what this is, and if I should be using it
@@ -220,12 +223,13 @@ def load_seiir_params(run_dir, theta):
     return params
 
 
-def load_covid_projection_data(cov_dir, run_dir, rates_dir, loc_id, t0):
-    """Load all data necessary for covid projections in a
-    single location
+def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id, t0):
+    """Extract and transform all data necessary for covid projections in a
+    single location, and store in a Vivarium Artifact
     
     Parameters
     ----------
+    art_fname : str, path for vivarium artifact to hold transformed data
     cov_dir : str, a directory in $SEIIR_DIR/covariate/,
               e.g. '2020_06_23.03.01'
     run_dir : str, a directory in $SEIIR_DIR/regression/,
@@ -234,27 +238,42 @@ def load_covid_projection_data(cov_dir, run_dir, rates_dir, loc_id, t0):
               e.g. '2020_06_29.01'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
-    start_date : pd.Timestamp, e.g. pd.Timestamp('2020-09-01')
+    start_date : str convertable to pd.Timestamp, e.g. '2020-09-01'
     
     Results
     -------
-    returns dict of data (mostly pd.DataFrames, but also some dict-of-dicts)
+    returns Vivarium Artifact
     """
+    art = Artifact(art_fname)
+
+    metadata_dict = dict(cov_dir=cov_dir, run_dir=run_dir, rates_dir=rates_dir, loc_id=loc_id, t0=t0)
+    art.write('metadata.data_params', metadata_dict)
+
+
     df_covs = load_covariates(cov_dir)
+    art.write('beta.covariates', df_covs)
+
     coeffs = load_effect_coefficients(run_dir, loc_id)
+    art.write('beta.coeffs', coeffs)
     beta_fit = load_beta_fit(run_dir, loc_id)
+    art.write('beta.fit', beta_fit)
 
     initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
     # TODO: get a composite initial state by mixing initial states from multiple locations
+    art.write('seiir.initial_states', initial_states)
 
     # extract theta from initial states
     theta = initial_states.theta.mean()
     assert initial_states.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
     params = load_seiir_params(run_dir, theta)
+    art.write('seiir.params', params)
 
     df_fac_staff = load_uw_fac_staff_ages()
     df_ifr = load_ifr(rates_dir)
-    return locals()
+    art.write('covid_deaths.fac_staff_ages', df_fac_staff)
+    art.write('covid_deaths.ifr', df_ifr)
+
+    return art
 
 
 def load_uw_fac_staff_ages():

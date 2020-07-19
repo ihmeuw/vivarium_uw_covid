@@ -119,7 +119,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
         df_compartment.loc[t+dt] = compartmental_hybrid_step(
                                         df_compartment.loc[t], df_individual_counts.loc[t],
                                         beta=beta_compartment.loc[t, draw],
-                                        mixing_parameter=mixing_parameter, **params[draw])
+                                        mixing_parameter=mixing_parameter, **params[str(draw)])
         
         df_individual_counts.loc[t+dt] = individual_hybrid_step(df_individual,
                                     df_compartment.loc[t],
@@ -128,7 +128,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                     mixing_parameter=mixing_parameter,
                                     use_mechanistic_testing=use_mechanistic_testing,
                                     test_rate=test_rate, test_positive_rate=test_positive_rate,
-                                    **params[draw])
+                                    **params[str(draw)])
     return df_individual_counts, df_compartment
 
 

@@ -1,8 +1,9 @@
 import numpy as np, pandas as pd
 import vivarium_uw_covid as vuc
-
-df_fac_staff = vuc.load_uw_fac_staff_ages()
-df_ifr = vuc.load_ifr('best')
+from vivarium import Artifact
+art = Artifact('src/vivarium_uw_covid/artifacts/wisc.hdf')
+df_fac_staff = art.load('covid_deaths.fac_staff_ages')
+df_ifr = art.load('covid_deaths.ifr')
 
 def test_sample_covid_deaths():
     df = vuc.initialize_age_and_sex(df_fac_staff, n_fac_staff=1_000, n_student=1_000)

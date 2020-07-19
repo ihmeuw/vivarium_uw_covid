@@ -146,7 +146,7 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
         df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
         df_counts.iloc[0] = df.covid_state.value_counts()
         for t in df_counts.index[1:]:
-            df_counts.loc[t] = agent_covid_step(df, beta=beta.loc[t, draw], **params[draw])
+            df_counts.loc[t] = agent_covid_step(df, beta=beta.loc[t, draw], **params[str(draw)])
 
         df_count_list.append(df_counts)
 

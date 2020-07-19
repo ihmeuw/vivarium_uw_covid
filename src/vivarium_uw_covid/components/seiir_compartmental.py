@@ -104,7 +104,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
             n_simulants = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R)
             n_infectious = (s0.I1 + s0.I2)
             df_i.loc[t+dt] = compartmental_covid_step(s0, n_simulants=n_simulants, n_infectious=n_infectious,
-                                                      beta=beta.loc[t, draw], **params[draw])
+                                                      beta=beta.loc[t, draw], **params[str(draw)])
         df_count_list.append(df_i)
     return df_count_list
 

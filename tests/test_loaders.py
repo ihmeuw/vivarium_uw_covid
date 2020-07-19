@@ -30,7 +30,7 @@ def test_load_seiir_params():
     params = load_seiir_params(run_dir, theta=0)
     assert len(params) == 1_000, 'expect 1,000 draws'
     for p in ['alpha', 'sigma', 'gamma1', 'gamma2']:
-        assert p in params[999].keys(), f'expect parameter "{p}" to be in dict'
+        assert p in params['999'].keys(), f'expect parameter "{p}" to be in dict'
 
 
 
