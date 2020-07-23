@@ -39,7 +39,7 @@ def data_dict_from_artifact(fname):
         'df_covs': art.load('beta.covariates'),
         'beta_fit': art.load('beta.fit'),
 
-        'initial_states': art.load('seiir.initial_states'),
+        'compartment_sizes': art.load('seiir.compartment_sizes'),
         'params': art.load('seiir.params'),
         'df_fac_staff': art.load('covid_deaths.fac_staff_ages'),
         'df_ifr': art.load('covid_deaths.ifr'),

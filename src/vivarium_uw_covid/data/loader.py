@@ -169,9 +169,8 @@ def load_beta_fit(run_dir, loc_id):
     return pd.concat(betas)
 
 
-def load_seiir_initial_states(run_dir, loc_id, start_date):
-    """Load 1,000 draws of compartment sizes on specified date,
-    to use as initial states for simulation
+def load_seiir_compartment_sizes(run_dir, loc_id):
+    """Load 1,000 draws of compartment sizes
     
     Parameters
     ----------
@@ -179,7 +178,6 @@ def load_seiir_initial_states(run_dir, loc_id, start_date):
               e.g. '2020_06_23.07'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
-    start_date : pd.Timestamp, e.g. pd.Timestamp('2020-09-01')
     
     Results
     -------
@@ -187,14 +185,14 @@ def load_seiir_initial_states(run_dir, loc_id, start_date):
     rows for each draw
     """
 
-    initial_states = {}
+    compartment_sizes = []
     for draw in range(1_000):
         df_proj = pd.read_csv(f'{SEIIR_DIR}/forecast/{run_dir}/component_draws/{loc_id}/draw_{draw}.csv', index_col=0)
         df_proj.index = df_proj.pop('date').map(pd.Timestamp)
-        s_proj = df_proj.loc[start_date]
-        initial_states[draw] = s_proj
-    initial_states = pd.DataFrame(initial_states).T
-    return initial_states
+        df_proj['draw'] = draw
+        compartment_sizes.append(df_proj)
+
+    return pd.concat(compartment_sizes)
 
 
 def load_seiir_params(run_dir, theta):
@@ -223,7 +221,7 @@ def load_seiir_params(run_dir, theta):
     return params
 
 
-def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id, t0):
+def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id):
     """Extract and transform all data necessary for covid projections in a
     single location, and store in a Vivarium Artifact
     
@@ -238,7 +236,6 @@ def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id
               e.g. '2020_06_29.01'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
-    start_date : str convertable to pd.Timestamp, e.g. '2020-09-01'
     
     Results
     -------
@@ -246,11 +243,13 @@ def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id
     """
     art = Artifact(art_fname)
 
-    metadata_dict = dict(cov_dir=cov_dir, run_dir=run_dir, rates_dir=rates_dir, loc_id=loc_id, t0=t0)
+    metadata_dict = dict(cov_dir=cov_dir, run_dir=run_dir, rates_dir=rates_dir, loc_id=loc_id)
     art.write('metadata.data_params', metadata_dict)
 
 
     df_covs = load_covariates(cov_dir)
+    df_covs = df_covs[df_covs.location_id == loc_id]
+    assert len(df_covs) > 0
     art.write('beta.covariates', df_covs)
 
     coeffs = load_effect_coefficients(run_dir, loc_id)
@@ -258,13 +257,13 @@ def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id
     beta_fit = load_beta_fit(run_dir, loc_id)
     art.write('beta.fit', beta_fit)
 
-    initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
+    compartment_sizes = load_seiir_compartment_sizes(run_dir, loc_id)
+    art.write('seiir.compartment_sizes', compartment_sizes)
     # TODO: get a composite initial state by mixing initial states from multiple locations
-    art.write('seiir.initial_states', initial_states)
 
     # extract theta from initial states
-    theta = initial_states.theta.mean()
-    assert initial_states.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
+    theta = compartment_sizes.theta.mean()
+    assert compartment_sizes.theta.std() == 0, 'so far theta has been a fixed value; investigate if that changes'
     params = load_seiir_params(run_dir, theta)
     art.write('seiir.params', params)
 

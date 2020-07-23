@@ -1,25 +1,21 @@
 import numpy as np, pandas as pd
-
-
-cov_dir = '2020_06_23.03.01' # most recent dir in $seiir_dir/covariate/
-run_dir = '2020_06_23.07'  # 6/23 Production Runs, part 2, reference scenario
-loc_id = 60886 # King and Snohomish Counties
-t0 = pd.Timestamp('2020-09-01')
-
-
-from vivarium_uw_covid.data.loader import *
+from vivarium import Artifact
 from vivarium_uw_covid.components.seiir_beta import *
 from vivarium_uw_covid.components.seiir_compartmental import *
 
 
-df_covs = load_covariates(cov_dir)
-coeffs = load_effect_coefficients(run_dir, loc_id)
-initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
-params = load_seiir_params(run_dir, theta=0)
+art = Artifact('src/vivarium_uw_covid/artifacts/new_york.hdf')
+df_covs = art.load('beta.covariates')
+coeffs = art.load('beta.coeffs')
+
+params = art.load('seiir.params')
+compartment_sizes = art.load('seiir.compartment_sizes')
+t0 = '2020-09-01'
+initial_states = compartment_sizes.loc[t0].set_index('draw').dropna()
 
 
 def test_run_compartmental_model():
-    beta = beta_predict(coeffs, df_covs[df_covs.location_id == loc_id])
+    beta = beta_predict(coeffs, df_covs)
 
     n_draws = 1
     df_list = run_compartmental_model(n_draws, n_simulants=100_000,

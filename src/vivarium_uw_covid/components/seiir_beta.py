@@ -126,15 +126,13 @@ def beta_finalize(beta_pred, beta_fit):
     return beta_final
 
 
-def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
+def make_alternative_covariates(df_covs, start_time, **alt_cov_values):
     """Create alternative scenario beta(t) values for specified location
         
     Parameters
     ----------
     df_covs : pd.DataFrame with columns for covariates and rows for each
               time, e.g the output of load_covariates
-    loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
-             /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     start_time : pd.Timestamp
     alt_cov_values : covariate names and new values, which can be floats, array-like, or pd.Series,
                      e.g. testing_reference=0.005, mask_use=1.0 to create a scenario with high mask
@@ -143,9 +141,9 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
     Results
     -------
     returns pd.DataFrame with columns for covariates,
-    rows for each day for location specified loc_id
+    rows for each day
     """
-    alt_covs = df_covs[df_covs.location_id == loc_id].copy()
+    alt_covs = df_covs.copy()
     for cov, val in alt_cov_values.items():
         if cov.startswith('delta_'):
             cov = cov.replace('delta_', '')
@@ -156,7 +154,7 @@ def make_alternative_covariates(df_covs, loc_id, start_time, **alt_cov_values):
     return alt_covs
 
 
-def make_beta(coeffs, df_covs, loc_id, beta_fit):
+def make_beta(coeffs, df_covs, beta_fit):
     """Create alternative scenario beta(t) values for specified location
         
     Parameters
@@ -165,8 +163,6 @@ def make_beta(coeffs, df_covs, loc_id, beta_fit):
              e.g. the output of load_effect_coefficients
     df_covs : pd.DataFrame with columns for covariates and rows for each
               time, e.g the output of load_covariates
-    loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
-             /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     beta_fit : pd.DataFrame with columns for beta and date and draw,
                e.g the output of load_beta_fit
     Results
@@ -174,6 +170,6 @@ def make_beta(coeffs, df_covs, loc_id, beta_fit):
     returns pd.DataFrame of final beta values, with columns for each draw,
     and rows for each day
     """
-    beta_pred = beta_predict(coeffs, df_covs[df_covs.location_id == loc_id])
+    beta_pred = beta_predict(coeffs, df_covs)
     beta_final = beta_finalize(beta_pred, beta_fit)
     return beta_final

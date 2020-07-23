@@ -19,11 +19,11 @@ def test_load_coeffs():
     assert len(coeffs) == 1_000, 'expect 1,000 draws'
 
 
-def test_load_seiir_initial_states():
-    initial_states = load_seiir_initial_states(run_dir, loc_id, t0)
+def test_load_seiir_compartment_sizes():
+    df = load_seiir_compartment_sizes(run_dir, loc_id)
     for state in ['S', 'E', 'I1', 'I2', 'R']:
-        assert state in initial_states.columns, f'expect column for state "{state}"'
-    assert len(initial_states) == 1_000, 'expect 1,000 draws'
+        assert state in df.columns, f'expect column for state "{state}"'
+    assert df.draw.nunique() == 1_000, 'expect 1,000 draws'
 
 
 def test_load_seiir_params():

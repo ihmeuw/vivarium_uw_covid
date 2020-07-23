@@ -89,7 +89,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
     compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
     
     df_count_list = []
-    for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
+    for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
         df_i = pd.DataFrame(index=days, columns=compartments)
 
         # initialize states from IHME Projection for time zero

@@ -167,7 +167,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     df_agent_count_list, df_compartment_count_list = [], []
 
-    for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
+    for draw in np.random.choice(initial_states_agent.index, replace=False, size=n_draws):
         
         df_individual_counts, df_compartment = run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                                                     beta_agent, beta_compartment,

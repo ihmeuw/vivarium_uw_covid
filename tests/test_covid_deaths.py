@@ -1,11 +1,13 @@
 import numpy as np, pandas as pd
 import vivarium_uw_covid as vuc
+
 from vivarium import Artifact
 art = Artifact('src/vivarium_uw_covid/artifacts/wisc.hdf')
 df_fac_staff = art.load('covid_deaths.fac_staff_ages')
 df_ifr = art.load('covid_deaths.ifr')
 
 def test_sample_covid_deaths():
+    np.random.seed(12345)
     df = vuc.initialize_age_and_sex(df_fac_staff, n_fac_staff=1_000, n_student=1_000)
     f_ifr = vuc.initialize_ifr(df_ifr)
     death = vuc.sample_covid_deaths(df, f_ifr)

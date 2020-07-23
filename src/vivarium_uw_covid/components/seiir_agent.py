@@ -139,7 +139,7 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
     """
     df_count_list = []
 
-    for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
+    for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
         df = pd.DataFrame(index=range(n_simulants))
         df['covid_state'] = agent_covid_initial_states(n_simulants, initial_states.loc[draw])
 
