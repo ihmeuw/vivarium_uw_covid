@@ -88,7 +88,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
     days = beta.loc[start_time:].index
     compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
     
-    df_count_list = []
+    df_count_dict = {}
     for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
         df_i = pd.DataFrame(index=days, columns=compartments)
 
@@ -96,7 +96,8 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
         for state in compartments:
             if state != 'n_new_infections':
                 df_i.loc[start_time, state] = initial_states.loc[draw, state]
-        df_i.loc[start_time] *= n_simulants / df_i.loc[start_time].sum()  # rescale to have requested number of simulants
+        if n_simulants > 0:
+            df_i.loc[start_time] *= n_simulants / df_i.loc[start_time].sum()  # rescale to have requested number of simulants
     
         dt = pd.Timedelta(days=1)
         for t in df_i.index[:-1]:
@@ -105,7 +106,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
             n_infectious = (s0.I1 + s0.I2)
             df_i.loc[t+dt] = compartmental_covid_step(s0, n_simulants=n_simulants, n_infectious=n_infectious,
                                                       beta=beta.loc[t, draw], **params[str(draw)])
-        df_count_list.append(df_i)
-    return df_count_list
+        df_count_dict[draw] = df_i
+    return df_count_dict
 
 

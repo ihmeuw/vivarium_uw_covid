@@ -21,6 +21,7 @@ from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium import Artifact
 from vivarium_uw_covid import paths, globals as project_globals
+import json
 
 
 def get_data(lookup_key: str, location: str) -> pd.DataFrame:
@@ -221,19 +222,15 @@ def load_seiir_params(run_dir, theta):
     return params
 
 
-def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id):
+def extract_covid_projection_data(art_fname, run_dir, loc_id):
     """Extract and transform all data necessary for covid projections in a
     single location, and store in a Vivarium Artifact
     
     Parameters
     ----------
     art_fname : str, path for vivarium artifact to hold transformed data
-    cov_dir : str, a directory in $SEIIR_DIR/covariate/,
-              e.g. '2020_06_23.03.01'
     run_dir : str, a directory in $SEIIR_DIR/regression/,
               e.g. '2020_06_23.07'
-    rates_dir : str, a directory in $RATES_DIR/,
-              e.g. '2020_06_29.01'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     
@@ -241,6 +238,10 @@ def extract_covid_projection_data(art_fname, cov_dir, run_dir, rates_dir, loc_id
     -------
     returns Vivarium Artifact
     """
+    settings = json.load(open(f'{SEIIR_DIR}/forecast/{run_dir}/settings.json'))
+    cov_dir = settings['covariate_version']
+    rates_dir = 'best'
+
     art = Artifact(art_fname)
 
     metadata_dict = dict(cov_dir=cov_dir, run_dir=run_dir, rates_dir=rates_dir, loc_id=loc_id)

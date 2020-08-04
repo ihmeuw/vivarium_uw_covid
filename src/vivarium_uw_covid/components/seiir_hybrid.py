@@ -67,7 +67,7 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
 
 def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                          beta_agent, beta_compartment,
-                         start_time,
+                         start_time, end_time,
                          initial_states_agent, initial_states_compartment,
                          use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Project population sizes from start time to end of beta.index
@@ -83,6 +83,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
     beta_agent : pd.DataFrame with index of dates and columns for draws
     beta_compartment : pd.DataFrame with index of dates and columns for draws
     start_time : pd.Timestamp
+    end_time : pd.Timestamp
     initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     use_mechanistic_testing : bool
@@ -96,7 +97,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
     """
 
     states = ['S', 'E', 'I1', 'I2', 'R']
-    days = beta_agent.loc[start_time:].index
+    days = beta_agent.loc[start_time:end_time].index
 
     ## initialize population table for individual-based model
     df_individual = pd.DataFrame(index=range(n_simulants))
@@ -136,6 +137,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
 def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                      beta_agent, beta_compartment,
                      start_time,
+                     end_time,
                      initial_states_agent, initial_states_compartment,
                      use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Project population sizes from start time to end of beta.index
@@ -171,7 +173,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
         
         df_individual_counts, df_compartment = run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
                                                                     beta_agent, beta_compartment,
-                                                                    start_time,
+                                                                    start_time, end_time,
                                                                     initial_states_agent, initial_states_compartment,
                                                                     use_mechanistic_testing, test_rate, test_positive_rate)
 
@@ -188,7 +190,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
 def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                      beta_agent, beta_compartment,
-                     start_time,
+                     start_time, end_time,
                      initial_states_agent, initial_states_compartment,
                      use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Project population sizes from start time to end of beta.index
@@ -204,6 +206,7 @@ def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
     beta_agent : pd.DataFrame with index of dates and columns for draws
     beta_compartment : pd.DataFrame with index of dates and columns for draws
     start_time : pd.Timestamp
+    end_time : pd.Timestamp
     initial_states_agent : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     initial_states_compartment : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     use_mechanistic_testing : bool
@@ -226,7 +229,7 @@ def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
         
         df_tuple = delayed(run_one_hybrid_model)(draw, n_simulants, mixing_parameter, params,
                                                  beta_agent, beta_compartment,
-                                                 start_time,
+                                                 start_time, end_time,
                                                  initial_states_agent, initial_states_compartment,
                                                  use_mechanistic_testing, test_rate, test_positive_rate)
 
