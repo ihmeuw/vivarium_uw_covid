@@ -25,13 +25,14 @@ def agent_covid_initial_states(n_simulants, compartment_sizes):
     
     p = [compartment_sizes[state] for state in state_list]
     p = np.array(p)
-    p /= p.sum()
+    p = p / p.sum()
     
     state = np.random.choice(state_list, size=n_simulants, replace=True, p=p)
     return state
 
 
-def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
+def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta,
+                     use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Make one step for agent-based model
 
     Parameters
@@ -49,7 +50,8 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta):
     n_simulants = len(df)
     infection_rate = (beta * n_infectious**alpha + theta) / n_simulants
 
-    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta)
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+                                                use_mechanistic_testing, test_rate, test_positive_rate)
 
 def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
                                          use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
@@ -99,7 +101,7 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     n_new_isolations = 0
     if use_mechanistic_testing:
         n_test_positive = test_rate * test_positive_rate * len(df)
-        n_infected = ((df.covid_state == 'E') | (df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
+        n_infected = ((df.covid_state == 'I1') | (df.covid_state == 'I2')).sum()
 
         if n_infected > 0:
             test_rate_among_infected = n_test_positive / n_infected
@@ -119,7 +121,46 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     return s_result
 
 
-def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states):
+def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states,
+                        use_mechanistic_testing, test_rate, test_positive_rate):
+    """Project population sizes from start time to end of beta.index
+
+    Parameters
+    ----------
+    n_draws : int
+    n_simulants : int
+    params : dict with values for 
+                alpha, gamma1, gamma2, sigma, theta : float
+    beta : pd.Series with index of dates
+    start_time : pd.Timestamp
+    initial_states : pd.Series with index of S, E, I1, I2, R
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
+
+    Results
+    -------
+    returns pd.DataFrames with colunms for counts for S, E, I1, I2, and R
+    and rows for each day of projection
+    """
+    df = pd.DataFrame(index=range(n_simulants))
+    df['covid_state'] = agent_covid_initial_states(n_simulants, initial_states)
+
+    df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
+    df_counts.iloc[0] = df.covid_state.value_counts()
+    for t in df_counts.index[1:]:
+        df_counts.loc[t] = agent_covid_step(df,
+                                            beta=beta.loc[t],
+                                            use_mechanistic_testing=use_mechanistic_testing,
+                                            test_rate=test_rate,
+                                            test_positive_rate=test_positive_rate,
+                                            **params,
+                                        )
+    return df_counts
+
+
+def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states,
+                    use_mechanistic_testing=False, test_rate=0.0, test_positive_rate=0.05):
     """Project population sizes from start time to end of beta.index
 
     Parameters
@@ -131,25 +172,25 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
     beta : pd.DataFrame with index of dates and columns for draws
     start_time : pd.Timestamp
     initial_states : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
 
     Results
     -------
     returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
     and rows for each day of projection
     """
-    df_count_list = []
+    from dask import delayed, compute
+    result_dict = {}
 
     for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
-        df = pd.DataFrame(index=range(n_simulants))
-        df['covid_state'] = agent_covid_initial_states(n_simulants, initial_states.loc[draw])
+        result_dict[draw] = delayed(run_one_agent_model)(n_draws, n_simulants, params[str(draw)],
+                                                         beta.loc[:,draw], start_time, initial_states.loc[draw],
+                                                         use_mechanistic_testing, test_rate, test_positive_rate)
 
-        df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
-        df_counts.iloc[0] = df.covid_state.value_counts()
-        for t in df_counts.index[1:]:
-            df_counts.loc[t] = agent_covid_step(df, beta=beta.loc[t, draw], **params[str(draw)])
+    results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple
+    return results_tuple[0] # entry 0 of the 1-tuple is the dict
 
-        df_count_list.append(df_counts)
-
-    return df_count_list
 
 

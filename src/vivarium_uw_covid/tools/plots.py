@@ -7,7 +7,7 @@ def hop_plot(df_count_list, ymax=0, title='', metric='new_infections'):
     try:
         while True:
             plot_results(df_count_list[:100], ymax, title, metric)
-            df = df_count_list[np.random.choice(range(len(df_count_list)))]
+            df = df_count_list[np.random.choice(df_count_list.keys())]
             if metric == 'new_infections':
                 s = df.n_new_infections
             elif metric == 'cumulative_infections':
@@ -25,7 +25,7 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_d
     plt.figure(figsize=(11, 4.25), dpi=120)
 
     s_list = []
-    for df in df_count_list:
+    for df in df_count_list.values():
         
         if metric == 'new_infections':
             s = df.n_new_infections
