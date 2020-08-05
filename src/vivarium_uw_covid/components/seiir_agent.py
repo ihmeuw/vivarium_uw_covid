@@ -121,7 +121,7 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
     return s_result
 
 
-def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states,
+def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, end_time, initial_states,
                         use_mechanistic_testing, test_rate, test_positive_rate):
     """Project population sizes from start time to end of beta.index
 
@@ -132,7 +132,7 @@ def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, initial_
     params : dict with values for 
                 alpha, gamma1, gamma2, sigma, theta : float
     beta : pd.Series with index of dates
-    start_time : pd.Timestamp
+    start_time, end_time : pd.Timestamp
     initial_states : pd.Series with index of S, E, I1, I2, R
     use_mechanistic_testing : bool
     test_rate : tests per person per day
@@ -146,7 +146,8 @@ def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, initial_
     df = pd.DataFrame(index=range(n_simulants))
     df['covid_state'] = agent_covid_initial_states(n_simulants, initial_states)
 
-    df_counts = pd.DataFrame(index=beta.loc[start_time:].index, columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
+    df_counts = pd.DataFrame(index=beta.loc[start_time:end_time].index,
+                             columns=['S', 'E', 'I1', 'I2', 'R', 'n_new_infections', 'n_new_isolations'])
     df_counts.iloc[0] = df.covid_state.value_counts()
     for t in df_counts.index[1:]:
         df_counts.loc[t] = agent_covid_step(df,
@@ -159,9 +160,9 @@ def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, initial_
     return df_counts
 
 
-def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_states,
+def run_agent_model(n_draws, n_simulants, params, beta, start_time, end_time, initial_states,
                     use_mechanistic_testing=False, test_rate=0.0, test_positive_rate=0.05):
-    """Project population sizes from start time to end of beta.index
+    """Project population sizes from start time to end_time
 
     Parameters
     ----------
@@ -170,7 +171,7 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
     params : dict-of-dicts, where draw maps to dict with values for 
                 alpha, gamma1, gamma2, sigma, theta : float
     beta : pd.DataFrame with index of dates and columns for draws
-    start_time : pd.Timestamp
+    start_time, end_time : pd.Timestamp
     initial_states : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     use_mechanistic_testing : bool
     test_rate : tests per person per day
@@ -186,7 +187,7 @@ def run_agent_model(n_draws, n_simulants, params, beta, start_time, initial_stat
 
     for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
         result_dict[draw] = delayed(run_one_agent_model)(n_draws, n_simulants, params[str(draw)],
-                                                         beta.loc[:,draw], start_time, initial_states.loc[draw],
+                                                         beta.loc[:,draw], start_time, end_time, initial_states.loc[draw],
                                                          use_mechanistic_testing, test_rate, test_positive_rate)
 
     results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple

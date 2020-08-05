@@ -1,7 +1,7 @@
 import numpy as np, pandas as pd
 
-cov_dir = '2020_06_23.03.01' # most recent dir in $seiir_dir/covariate/
-run_dir = '2020_06_23.07'  # 6/23 Production Runs, part 2, reference scenario
+cov_dir = '2020_08_05.02.01' # most recent dir in $seiir_dir/covariate/
+run_dir = '2020_08_05.02'  # updated, since old dirs were deleted
 loc_id = 60886 # King and Snohomish Counties
 t0 = pd.Timestamp('2020-09-01')
 
@@ -10,12 +10,12 @@ from vivarium_uw_covid.data.loader import *
 def test_load_covariates():
     df_covs = load_covariates(cov_dir)
 
-    assert 'mask_use' in df_covs.columns
+    assert 'pneumonia' in df_covs.columns
 
 
 def test_load_coeffs():
     coeffs = load_effect_coefficients(run_dir, loc_id)
-    assert 'mask_use' in coeffs.columns, 'expect a mask_use effect coefficient'
+    assert 'intercept' in coeffs.columns, 'expect a mask_use effect coefficient'
     assert len(coeffs) == 1_000, 'expect 1,000 draws'
 
 

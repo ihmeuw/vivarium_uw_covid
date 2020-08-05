@@ -134,7 +134,7 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, end_
                                         initial_states.loc[draw]
                                     )
 
-    results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple
+    results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple (FIXME: unless n_draws == 1)
     return results_tuple[0] # entry 0 of the 1-tuple is the dict
 
 

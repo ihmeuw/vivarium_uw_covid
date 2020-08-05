@@ -10,6 +10,7 @@ coeffs = art.load('beta.coeffs')
 params = art.load('seiir.params')
 compartment_sizes = art.load('seiir.compartment_sizes')
 t0 = '2020-09-01'
+t1 = '2020-09-05'
 initial_states = compartment_sizes.loc[t0].set_index('draw').dropna()
 beta = beta_predict(coeffs, df_covs)
 
@@ -21,6 +22,7 @@ def test_run_hybrid_model():
                                             mixing_parameter=.5, params=params,
                                             beta_agent=beta, beta_compartment=beta,
                                             start_time=t0,
+                                            end_time=t1,
                                             initial_states_agent=initial_states,
                                             initial_states_compartment=initial_states)
 
@@ -35,6 +37,7 @@ def test_run_hybrid_model_w_testing():
                                             mixing_parameter=.5, params=params,
                                             beta_agent=beta, beta_compartment=beta,
                                             start_time=t0,
+                                            end_time=t1,
                                             initial_states_agent=initial_states,
                                             initial_states_compartment=initial_states,
                                             use_mechanistic_testing=True,
