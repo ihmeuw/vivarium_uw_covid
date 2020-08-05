@@ -137,7 +137,8 @@ def make_alternative_covariates(df_covs, start_time, **alt_cov_values):
     alt_cov_values : covariate names and new values, which can be floats, array-like, or pd.Series,
                      e.g. testing_reference=0.005, mask_use=1.0 to create a scenario with high mask
                      use and high testing; if name starts with "delta_" then add to value, instead
-                     of replacing it
+                     of replacing it; if name starts with "max_" then use this to clip value, instead 
+                     of replacing it.
     Results
     -------
     returns pd.DataFrame with columns for covariates,
@@ -148,6 +149,9 @@ def make_alternative_covariates(df_covs, start_time, **alt_cov_values):
         if cov.startswith('delta_'):
             cov = cov.replace('delta_', '')
             alt_covs.loc[start_time:, cov] += val
+        elif cov.startswith('max_'):
+            cov = cov.replace('max_', '')
+            alt_covs.loc[start_time:, cov] = np.minimum(val, alt_covs.loc[start_time:, cov])
         else:
             alt_covs.loc[start_time:, cov] = val
 

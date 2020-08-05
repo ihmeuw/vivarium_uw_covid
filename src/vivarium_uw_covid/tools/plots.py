@@ -21,7 +21,7 @@ def hop_plot(df_count_list, ymax=0, title='', metric='new_infections'):
     except KeyboardInterrupt:
         pass
 
-def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_dates=['2020-12-11']):
+def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_times=['2020-12-11']):
     plt.figure(figsize=(11, 4.25), dpi=120)
 
     s_list = []
@@ -61,13 +61,13 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_d
     # UW Fall 2020 Quarter starts 2020-09-30 and ends 2020-12-11 (final exam week ends 2020-12-18)
     # https://www.washington.edu/students/reg/2021cal.html
     # TODO: draw a line for when it ends, and note the metric values at this point
-    #plt.plot([end_date, end_date], [0, ymax], 'k:')
+    #plt.plot([end_time, end_time], [0, ymax], 'k:')
     summary_result_str = ''
-    for end_date in end_dates:
-        end_date = pd.Timestamp(end_date)
+    for end_time in end_times:
+        end_time = pd.Timestamp(end_time)
     
         summary_result_str += f"\n{metric.replace('_', ' ').capitalize()} on "
-        summary_result_str += f"{end_date.strftime('%D')}:\n    {s_median[end_date]:,.0f} (95% UI {s_lb[end_date]:,.0f} to {s_ub[end_date]:,.0f})\n"
+        summary_result_str += f"{end_time.strftime('%D')}:\n    {s_median[end_time]:,.0f} (95% UI {s_lb[end_time]:,.0f} to {s_ub[end_time]:,.0f})\n"
     print(summary_result_str)
     plt.text(s.index[0], ymax, summary_result_str, ha='left', va='top')
     plt.axis(ymin=0, ymax=ymax)
@@ -87,12 +87,12 @@ def plot_medians_over_time(results, legend_title):
 #     plt.semilogy()
 
 
-def plot_medians_at_end_of_quarter(results, close_date, xlabel):
+def plot_medians_at_end_of_quarter(results, close_time, xlabel):
     plt.figure(figsize=(11, 4.25), dpi=120)
 
     xx, yy, yy_lb, yy_ub = [], [], [], []
     for val, df_list in results.items():
-        cum_cases = [t.n_new_infections.cumsum()[close_date] for t in df_list]
+        cum_cases = [t.n_new_infections.cumsum()[close_time] for t in df_list]
         xx.append(val)
         yy.append(np.median(cum_cases))
         yy_lb.append(np.median(cum_cases) - np.percentile(cum_cases, 2.5))
@@ -100,7 +100,7 @@ def plot_medians_at_end_of_quarter(results, close_date, xlabel):
         
         
     plt.errorbar(xx, yy, yerr=[yy_lb, yy_ub], marker='o', linestyle='-')
-    plt.ylabel(f"Cumulative infections on {close_date.strftime('%D')}")
+    plt.ylabel(f"Cumulative infections on {close_time.strftime('%D')}")
     plt.xlabel(xlabel)
     plt.grid()
     plt.axis(ymin=0)

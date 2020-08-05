@@ -30,6 +30,7 @@ def data_dict_from_artifact(fname):
     This is a hacky function for convenience, and perhaps should be
     removed in the future
     """
+    print(f'Loading all COVID-19 projection data from {fname}')
 
     from vivarium import Artifact
     art = Artifact(fname)

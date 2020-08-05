@@ -241,6 +241,7 @@ def extract_covid_projection_data(art_fname, run_dir, loc_id):
     settings = json.load(open(f'{SEIIR_DIR}/forecast/{run_dir}/settings.json'))
     cov_dir = settings['covariate_version']
     rates_dir = 'best'
+    loc_id = int(loc_id)
 
     art = Artifact(art_fname)
 

@@ -67,7 +67,46 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     return s1
 
 
-def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, initial_states):
+def run_one_compartmental_model(n_simulants, params, beta, start_time, end_time, initial_states):
+    """Project population sizes from start time to end of beta.index
+    
+    Parameters
+    ----------
+    n_simulants : int
+    params : dict where draw maps to dict with values for 
+                alpha, gamma1, gamma2, sigma, theta : float
+    beta : pd.Series with index of dates
+    start_time, end_time : pd.Timestamp
+    initial_states : pd.Series with index of S, E, I1, I2, R
+    
+    Results
+    -------
+    returns pd.DataFrames with columns for counts for S, E, I1, I2, and R
+    and rows for each day of projection
+    """
+    days = beta.loc[start_time:end_time].index
+    compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
+    
+    df_i = pd.DataFrame(index=days, columns=compartments)
+
+    # initialize states from IHME Projection for time zero
+    for state in compartments:
+        if state != 'n_new_infections':
+            df_i.loc[start_time, state] = initial_states.loc[state]
+    if n_simulants > 0:
+        df_i.loc[start_time] *= n_simulants / df_i.loc[start_time].sum()  # rescale to have requested number of simulants
+
+    dt = pd.Timedelta(days=1)
+    for t in df_i.index[:-1]:
+        s0 = df_i.loc[t]
+        n_simulants = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R)
+        n_infectious = (s0.I1 + s0.I2)
+        df_i.loc[t+dt] = compartmental_covid_step(s0, n_simulants=n_simulants, n_infectious=n_infectious,
+                                                  beta=beta.loc[t], **params)
+    return df_i
+
+
+def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, end_time, initial_states):
     """Project population sizes from start time to end of beta.index
     
     Parameters
@@ -77,36 +116,25 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, init
     params : dict-of-dicts, where draw maps to dict with values for 
                 alpha, gamma1, gamma2, sigma, theta : float
     beta : pd.DataFrame with index of dates and columns for draws
-    start_time : pd.Timestamp
+    start_time, end_time : pd.Timestamp
     initial_states : pd.DataFrame with index of draws and colunms for S, E, I1, I2, R
     
     Results
     -------
-    returns list of pd.DataFrames with colunms for counts for S, E, I1, I2, and R
+    returns dict of pd.DataFrames with columns for counts for S, E, I1, I2, and R
     and rows for each day of projection
     """
-    days = beta.loc[start_time:].index
-    compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
+    from dask import delayed, compute
     
-    df_count_dict = {}
+    result_dict = {}
     for draw in np.random.choice(initial_states.index, replace=False, size=n_draws):
-        df_i = pd.DataFrame(index=days, columns=compartments)
+        result_dict[draw] = delayed(run_one_compartmental_model)(
+                                        n_simulants, params[str(draw)],
+                                        beta[draw], start_time, end_time,
+                                        initial_states.loc[draw]
+                                    )
 
-        # initialize states from IHME Projection for time zero
-        for state in compartments:
-            if state != 'n_new_infections':
-                df_i.loc[start_time, state] = initial_states.loc[draw, state]
-        if n_simulants > 0:
-            df_i.loc[start_time] *= n_simulants / df_i.loc[start_time].sum()  # rescale to have requested number of simulants
-    
-        dt = pd.Timedelta(days=1)
-        for t in df_i.index[:-1]:
-            s0 = df_i.loc[t]
-            n_simulants = (s0.S + s0.E + s0.I1 + s0.I2 + s0.R)
-            n_infectious = (s0.I1 + s0.I2)
-            df_i.loc[t+dt] = compartmental_covid_step(s0, n_simulants=n_simulants, n_infectious=n_infectious,
-                                                      beta=beta.loc[t, draw], **params[str(draw)])
-        df_count_dict[draw] = df_i
-    return df_count_dict
+    results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple
+    return results_tuple[0] # entry 0 of the 1-tuple is the dict
 
 
