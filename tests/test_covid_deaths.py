@@ -16,11 +16,11 @@ def test_sample_covid_deaths():
 
 
 def test_generate_covid_deaths():
-    df = pd.DataFrame({'R': [100_000]})
+    df = pd.DataFrame({'R': [100_000, 200_000]})
 
-    deaths00 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, [df], end_date=0, student_frac=0.0)
-    deaths05 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, [df], end_date=0, student_frac=0.5)
-    deaths10 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, [df], end_date=0, student_frac=1.0)
+    deaths00 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, {0:df}, start_date=0, end_date=1, student_frac=0.0)
+    deaths05 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, {0:df}, start_date=0, end_date=1, student_frac=0.5)
+    deaths10 = vuc.generate_covid_deaths(df_fac_staff, df_ifr, {0:df}, start_date=0, end_date=1, student_frac=1.0)
 
     assert float(deaths00) >= float(deaths05)
     assert float(deaths05) >= float(deaths10)

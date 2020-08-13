@@ -110,6 +110,33 @@ def sample_covid_deaths(df, f_ifr):
     return (np.random.uniform(size=len(df)) <= ifr)
 
 
+def generate_one_draw_of_covid_deaths(df, df_fac_staff, start_date, end_date, student_frac, f_ifr, seed):
+    """Generate estimated cumulative count of individuals to die from COVID
+    for a single draw of simulation output on selected date
+
+    Parameters
+    ----------
+    df : pd.DataFrames with a row for each day of sim, and 
+              a column "R" for the removed individuals
+    df_fac_staff : pd.DataFrame
+    start_date, end_date : pd.Timestamp in index of dataframes in df_dict, to be used for start and end date of cumulative count
+    student_frac : float in interval (0,1), to be used for mix of student/non-students
+    f_irf : dict of interpolated age-specific ifr functions for males and females
+    seed : int, random seed for reproducible random numbers
+
+    Results
+    -------
+    returns count of deaths
+    """
+    np.random.seed(13245+seed)
+    n_infected = int(np.round(df.loc[end_date, 'R'] - df.loc[start_date, 'R']))
+    n_student = np.random.binomial(n_infected, student_frac)
+    n_fac_staff = n_infected - n_student
+    df_ages = initialize_age_and_sex(df_fac_staff, n_fac_staff, n_student)
+    s_death = sample_covid_deaths(df_ages, f_ifr)
+    return s_death.sum()
+
+
 def generate_covid_deaths(df_fac_staff, df_ifr, df_dict, start_date, end_date, student_frac):
     """Generate estimated cumulative count of individuals to die from COVID
     for each simulation output on selected date
@@ -125,15 +152,14 @@ def generate_covid_deaths(df_fac_staff, df_ifr, df_dict, start_date, end_date, s
     -------
     returns a pd.Series of death counts
     """
+    from dask import delayed, compute
+    
     f_ifr = initialize_ifr(df_ifr)
 
-    deaths = []
-    for k, df in df_dict.items():
-        n_infected = int(np.round(df.loc[end_date, 'R'] - df.loc[start_date, 'R']))
-        n_student = np.random.binomial(n_infected, student_frac)
-        n_fac_staff = n_infected - n_student
-        df_ages = initialize_age_and_sex(df_fac_staff, n_fac_staff, n_student)
-        s_death = sample_covid_deaths(df_ages, f_ifr)
-        
-        deaths.append(s_death.sum())
-    return pd.Series(deaths)
+    results_dict = {}
+    for draw, df in df_dict.items():
+        results_dict[draw] = delayed(generate_one_draw_of_covid_deaths)(df, df_fac_staff,
+                                                start_date, end_date, student_frac, f_ifr, draw)
+
+    results_tuple = compute(results_dict)  # dask.compute returns a 1-tuple (FIXME: unless n_draws == 1)
+    return pd.Series(results_tuple[0]) # entry 0 of the 1-tuple is the dict
