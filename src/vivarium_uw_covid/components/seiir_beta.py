@@ -37,13 +37,15 @@ def beta_predict(coeffs, covs):
     return pd.DataFrame(np.exp(log_beta), index=covs.index)
 
 
-# from https://github.com/ihmeuw/covid-model-seiir-pipeline/blob/master/src/covid_model_seiir_pipeline/core/utils.py
+# from https://github.com/ihmeuw/covid-model-seiir-pipeline/blob/develop/src/covid_model_seiir_pipeline/core/utils.py#L137-L210
 def beta_shift(beta_fit: pd.DataFrame,
                beta_pred: np.ndarray,
                draw_id: int,
                window_size: Union[int, None] = None,
                average_over_min: int = 1,
-               average_over_max: int = 35) -> Tuple[np.ndarray, Dict[str, float]]:
+               average_over_max: int = 35,
+               total_deaths: int = None,
+               offset: float = 0) -> Tuple[np.ndarray, Dict[str, float]]:
     """Calculate the beta shift.
     Args:
         beta_fit (pd.DataFrame): Data frame contains the date and beta fit.
@@ -62,23 +64,38 @@ def beta_shift(beta_fit: pd.DataFrame,
     beta_fit = beta_fit.sort_values('date')
     beta_hat = beta_fit['beta_pred'].values
     beta_fit = beta_fit['beta'].values
+    one_week = 7  # minimum period over which to residual average
+    deaths_upper = 300  # bound at which we let the residual average be what it is
+    deaths_lower = 150  # bound at which we shift the residual average so the mean across draws is 0
 
     rs = np.random.RandomState(seed=draw_id)
-    avg_over = rs.randint(average_over_min, average_over_max)
+    a = rs.randint(1, average_over_min)
+    b = rs.randint(a + one_week, average_over_max)
 
     beta_fit_final = beta_fit[-1]
     beta_pred_start = beta_pred[0]
 
+    if total_deaths is None or deaths_upper <= total_deaths:
+        offset = 0
+    elif deaths_lower <= total_deaths < deaths_upper:
+        offset_scale = (deaths_upper - total_deaths)/(deaths_upper - deaths_lower)
+        offset *= offset_scale
+    else:  # total_deaths < deaths_lower, use the provided offset (the mean across draws)
+        pass
+
     scale_init = beta_fit_final / beta_pred_start
     log_beta_resid = np.log(beta_fit / beta_hat)
-    scale_final = np.exp(log_beta_resid[-avg_over:].mean())
+    residual_mean = log_beta_resid[-b:-a].mean()
+    scale_final = np.exp(residual_mean - offset)
 
     scale_params = {
         'window_size': window_size,
-        'history_days': avg_over,
+        'history_days_end': b,
+        'history_days_start': a,
         'fit_final': beta_fit_final,
         'pred_start': beta_pred_start,
         'beta_ratio_mean': scale_final,
+        'offset': offset,
         'beta_residual_mean': np.log(scale_final),
     }
 
@@ -120,7 +137,7 @@ def beta_finalize(beta_pred, beta_fit):
             draw_id=draw,
             window_size=42,
             average_over_min=7,
-            average_over_max=28
+            average_over_max=42
         )
         beta_final.loc[crossover_time:, draw] = s_final
     return beta_final
