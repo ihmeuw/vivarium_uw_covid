@@ -110,15 +110,15 @@ def sample_covid_deaths(df, f_ifr):
     return (np.random.uniform(size=len(df)) <= ifr)
 
 
-def generate_covid_deaths(df_fac_staff, df_ifr, df_list, end_date, student_frac):
+def generate_covid_deaths(df_fac_staff, df_ifr, df_dict, start_date, end_date, student_frac):
     """Generate estimated cumulative count of individuals to die from COVID
     for each simulation output on selected date
 
     Parameters
     ----------
-    df_list : list of pd.DataFrames with a row for each day of sim, and 
-    a column "R" for the removed individuals
-    end_date : pd.Timestamp in index of dataframes in df_list, to be used for end date of cumulative count
+    df_dict : dict of pd.DataFrames with a row for each day of sim, and 
+              a column "R" for the removed individuals
+    start_date, end_date : pd.Timestamp in index of dataframes in df_dict, to be used for start and end date of cumulative count
     student_frac : float in interval (0,1), to be used for mix of student/non-students
 
     Results
@@ -128,8 +128,8 @@ def generate_covid_deaths(df_fac_staff, df_ifr, df_list, end_date, student_frac)
     f_ifr = initialize_ifr(df_ifr)
 
     deaths = []
-    for df in df_list:
-        n_infected = int(np.round(df.loc[end_date, 'R']))
+    for k, df in df_dict.items():
+        n_infected = int(np.round(df.loc[end_date, 'R'] - df.loc[start_date, 'R']))
         n_student = np.random.binomial(n_infected, student_frac)
         n_fac_staff = n_infected - n_student
         df_ages = initialize_age_and_sex(df_fac_staff, n_fac_staff, n_student)
