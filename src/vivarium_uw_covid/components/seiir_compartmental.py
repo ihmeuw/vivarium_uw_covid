@@ -35,7 +35,7 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
 
     [1] https://github.com/ihmeuw-msca/ODEOPT/blob/master/src/odeopt/ode/system/nonlinearsys.py#L215-L219
     """
-    substeps=10
+    substeps=25
     dt = 1/substeps
 
     s1 = s0.copy()
@@ -67,7 +67,7 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     return s1
 
 
-def run_one_compartmental_model(n_simulants, params, beta, start_time, end_time, initial_states):
+def run_one_compartmental_model(n_simulants, params, beta, start_time, end_time, initial_states, seed):
     """Project population sizes from start time to end of beta.index
     
     Parameters
@@ -78,12 +78,14 @@ def run_one_compartmental_model(n_simulants, params, beta, start_time, end_time,
     beta : pd.Series with index of dates
     start_time, end_time : pd.Timestamp
     initial_states : pd.Series with index of S, E, I1, I2, R
+    seed : int, seed for reproducible random numbers
     
     Results
     -------
     returns pd.DataFrames with columns for counts for S, E, I1, I2, and R
     and rows for each day of projection
     """
+    np.random.seed(seed)
     days = beta.loc[start_time:end_time].index
     compartments = ['S', 'E', 'I1', 'I2', 'R', 'n_new_infections']
     
@@ -131,7 +133,8 @@ def run_compartmental_model(n_draws, n_simulants, params, beta, start_time, end_
         result_dict[draw] = delayed(run_one_compartmental_model)(
                                         n_simulants, params[str(draw)],
                                         beta[draw], start_time, end_time,
-                                        initial_states.loc[draw]
+                                        initial_states.loc[draw],
+                                        seed=draw+12345
                                     )
 
     results_tuple = compute(result_dict)  # dask.compute returns a 1-tuple (FIXME: unless n_draws == 1)

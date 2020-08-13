@@ -37,7 +37,8 @@ def plot_results(df_count_list, ymax=0, title='', metric='new_infections', end_t
         else:
             assert 0, f'metric "{metric}" not recognized'
             
-        s.plot(color='k', alpha=.25)
+        if len(s_list) < 100:
+            s.plot(color='k', alpha=.25)
         s_list.append(s)
 
     s = pd.Series(np.median(s_list, axis=0), index=s.index)
