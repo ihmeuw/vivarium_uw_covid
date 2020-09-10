@@ -25,43 +25,80 @@ def compartmental_covid_step(s0, n_simulants, n_infectious, alpha, beta, gamma1,
     Notes
     -----
     This is intended to replicate the SEIIR ODE in the IHME Projection Model, which is listed
-    here [1], but has been augmented to include the importation parameter theta::
-    
+    here [1]::
+NEWER version --- not yet released
+        theta_plus = max(theta, 0.)
+        theta_minus = -min(theta, 0.)
+
+        new_e = beta*(s/self.N)*(i1 + i2)**self.alpha
+
+        ds = -new_e - theta_plus*s
+        de = new_e + theta_plus*s - self.sigma*e - theta_minus*e
+        di1 = self.sigma*e - self.gamma1*i1
+        di2 = self.gamma1*i1 - self.gamma2*i2
+        dr = self.gamma2*i2 + theta_minus*e
+
+CURRENT VERSION:: https://github.com/ihmeuw/covid-model-seiir/blob/master/src/covid_model_seiir/ode_forecasting/ode_runner.py#L38-L64
+
+        theta_plus = max(theta, 0.) * s / 1_000_000
+        theta_minus = min(theta, 0.)
+        theta_tilde = int(theta_plus != theta_minus)
+        theta_minus_alt = (self.gamma1 - self.delta) * i1 - self.sigma * e - theta_plus
+        effective_theta_minus = max(theta_minus, theta_minus_alt) * theta_tilde
+
+        new_e = beta*(s/self.N)*(i1 + i2)**self.alpha
+
+        ds = -new_e - theta_plus
+        de = new_e - self.sigma*e
+        di1 = self.sigma*e - self.gamma1*i1 + theta_plus + effective_theta_minus
+        di2 = self.gamma1*i1 - self.gamma2*i2
+        dr = self.gamma2*i2 - effective_theta_minus
+
+
+OLDER VERSION:::    
         ds = -beta*(s/self.N)*(i1 + i2)**self.alpha - theta/N
         de = beta*(s/self.N)*(i1 + i2)**self.alpha - self.sigma*e
         di1 = self.sigma*e - self.gamma1*i1 + theta/N  # TODO: get IHME Projection model to change theta/N addition to e instead of i1
         di2 = self.gamma1*i1 - self.gamma2*i2
         dr = self.gamma2*i2
 
-    [1] https://github.com/ihmeuw-msca/ODEOPT/blob/master/src/odeopt/ode/system/nonlinearsys.py#L215-L219
+    [1] https://github.com/ihmeuw/covid-model-seiir-pipeline/blob/refactor/split-regression-from-forecast/src/covid_model_seiir_pipeline/forecasting/model.py#L39-L62
     """
-    substeps=25
+    substeps=15
     dt = 1/substeps
 
     s1 = s0.copy()
     s1.n_new_infections = 0
     for i in range(substeps):
-        assert theta >= 0, 'only handle theta >= 0 for now'
-        pr_infected = 1 - np.exp(-dt*(beta * n_infectious**alpha + theta) / n_simulants)
-        dS = np.random.binomial(s0.S, pr_infected)
-        s1.n_new_infections += dS
-        s1.S -= dS
-        s1.E += dS
+        theta_plus = max(theta, 0.) / 1_000_000
+#        theta_plus = max(theta, 0.) / n_simulants
+#        theta_minus = -min(theta, 0.) / n_simulants
+        assert theta >= 0
+
+        pr_S_to_I1 = 1 - np.exp(-dt*((beta * n_infectious**alpha) / n_simulants))
+        dS_to_E = np.random.binomial(s0.S, pr_S_to_I1)
+        pr_S_to_I1 = 1 - np.exp(-dt*theta_plus)
+        dS_to_I1 = np.random.binomial(s0.S, pr_S_to_I1)
+        s1.n_new_infections += dS_to_E + dS_to_I1
+        s1.S -= dS_to_E + dS_to_I1
+        s1.E += dS_to_E
 
         pr_E_to_I1 = 1 - np.exp(-dt*sigma)
-        dE = np.random.binomial(s0.E, pr_E_to_I1)
-        s1.E -= dE
-        s1.I1 += dE
+        #pr_E_to_R = 1 - np.exp(-dt*theta_minus)
+        dE_to_I1 = np.random.binomial(s0.E, pr_E_to_I1)
+        #dE_to_R = np.random.binomial(s0.E, pr_E_to_R)
+        s1.E -= dE_to_I1 + dS_to_I1
+        s1.I1 += dE_to_I1
 
         pr_I1_to_I2 = 1 - np.exp(-dt*gamma1)
-        dI1 = np.random.binomial(s0.I1, pr_I1_to_I2)
-        s1.I1 -= dI1
-        s1.I2 += dI1
+        dI1_to_I2 = np.random.binomial(s0.I1, pr_I1_to_I2)
+        s1.I1 -= dI1_to_I2
+        s1.I2 += dI1_to_I2
 
         pr_I2_to_R = 1 - np.exp(-dt*gamma2)
-        dI2 = np.random.binomial(s0.I2, pr_I2_to_R)
-        s1.I2 -= dI2
-        s1.R += dI2
+        dI2_to_R = np.random.binomial(s0.I2, pr_I2_to_R)
+        s1.I2 -= dI2_to_R
+        s1.R += dI2_to_R #+ dE_to_R
 
         s0 = s1.copy()
     return s1

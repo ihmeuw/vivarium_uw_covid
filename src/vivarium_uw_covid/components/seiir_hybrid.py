@@ -161,13 +161,13 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     Results
     -------
-    returns two lists of pd.DataFrames with columns for counts for S, E, I1, I2, and R
+    returns two dicts of pd.DataFrames with columns for counts for S, E, I1, I2, and R
     as well as new infections, and rows for each day of projection; first list is for
     agent counts, and second list is for compartment counts
     """
     assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
 
-    df_agent_count_list, df_compartment_count_list = [], []
+    df_agent_count_dict, df_compartment_count_dict = {}, {}
 
     for draw in np.random.choice(initial_states_agent.index, replace=False, size=n_draws):
         
@@ -182,10 +182,10 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
         df_compartment['draw'] = draw
 
         # append the counts to their lists
-        df_agent_count_list.append(df_individual_counts)
-        df_compartment_count_list.append(df_compartment)
+        df_agent_count_dict[draw] = df_individual_counts
+        df_compartment_count_dict[draw] = df_compartment
                
-    return df_agent_count_list, df_compartment_count_list
+    return df_agent_count_dict, df_compartment_count_dict
 
 
 def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
