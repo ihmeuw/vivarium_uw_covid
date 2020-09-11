@@ -10,4 +10,4 @@ RESULTS_ROOT = Path(f'/share/costeffectiveness/results/{project_globals.PROJECT_
 
 SEIIR_DIR = '/ihme/covid-19/seir-pipeline-outputs'
 RATES_DIR = '/ihme/covid-19/rates'
-UW_DATA_DIR = '/home/j/Project/simulation_science/covid/data'
+UW_DATA_DIR = '/ihme/homes/abie/notebook/2020/data'

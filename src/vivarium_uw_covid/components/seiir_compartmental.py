@@ -70,7 +70,7 @@ OLDER VERSION:::
     s1 = s0.copy()
     s1.n_new_infections = 0
     for i in range(substeps):
-        theta_plus = max(theta, 0.) / 1_000_000
+        theta_plus = 0 #max(theta, 0.) / 1_000_000
 #        theta_plus = max(theta, 0.) / n_simulants
 #        theta_minus = -min(theta, 0.) / n_simulants
         assert theta >= 0

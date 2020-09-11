@@ -162,8 +162,8 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
     Results
     -------
     returns two dicts of pd.DataFrames with columns for counts for S, E, I1, I2, and R
-    as well as new infections, and rows for each day of projection; first list is for
-    agent counts, and second list is for compartment counts
+    as well as new infections, and rows for each day of projection; first dict is for
+    agent counts, and second dict is for compartment counts
     """
     assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
 
@@ -181,7 +181,7 @@ def run_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
         df_individual_counts['draw'] = draw
         df_compartment['draw'] = draw
 
-        # append the counts to their lists
+        # append the counts to their dicts
         df_agent_count_dict[draw] = df_individual_counts
         df_compartment_count_dict[draw] = df_compartment
                
@@ -215,15 +215,15 @@ def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
 
     Results
     -------
-    returns two lists of pd.DataFrames with columns for counts for S, E, I1, I2, and R
-    as well as new infections, and rows for each day of projection; first list is for
-    agent counts, and second list is for compartment counts
+    returns two dicts of pd.DataFrames with columns for counts for S, E, I1, I2, and R
+    as well as new infections, and rows for each day of projection; first dict is for
+    agent counts, and second dict is for compartment counts
     """
     from dask import delayed, compute
 
     assert 0 <= mixing_parameter <= 1, 'mixing_parameter must be in interval [0,1]'
 
-    df_agent_count_list, df_compartment_count_list = [], []
+    df_agent_count_dict, df_compartment_count_dict = {}, {}
 
     for draw in np.random.choice(range(1_000), replace=False, size=n_draws):
         
@@ -234,11 +234,11 @@ def prun_hybrid_model(n_draws, n_simulants, mixing_parameter, params,
                                                  use_mechanistic_testing, test_rate, test_positive_rate)
 
 
-        # append the counts to their lists
-        df_agent_count_list.append(df_tuple[0])
-        df_compartment_count_list.append(df_tuple[1])
+        # append the counts to their dicts
+        df_agent_count_dict[draw] = df_tuple[0]
+        df_compartment_count_dict[draw] = df_tuple[1]
                
-    return compute(df_agent_count_list, df_compartment_count_list)
+    return compute(df_agent_count_dict, df_compartment_count_dict)
 
 
 
