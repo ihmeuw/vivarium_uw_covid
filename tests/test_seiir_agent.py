@@ -1,25 +1,33 @@
 import numpy as np, pandas as pd
+from vivarium_uw_covid.components.seiir_agent import *
 
-from vivarium import Artifact
-art = Artifact('src/vivarium_uw_covid/artifacts/new_york.hdf')
-df_covs = art.load('beta.covariates')
-coeffs = art.load('beta.coeffs')
-compartment_sizes = art.load('seiir.compartment_sizes')
-
+# instead of loading an artifact, make testing data directly
+# based on 2020_08_04a_covid_microsim_seiir_tufts_params.ipynb
+n_draws = 32
 t0 = '2020-09-01'
 t1 = '2020-09-05'
-initial_states = compartment_sizes.loc[t0].set_index('draw').dropna()
-params = art.load('seiir.params')
 
+params = pd.DataFrame(
+               {'alpha':[1.0]*n_draws,
+                'sigma': [1/3.0]*n_draws,  # my sigma is one over their theta
+                'gamma1': [0.0102]*n_draws, # my gamma1 is their sigma
+                'gamma2': [1/14.0]*n_draws, # my gamma2 is their rho
+                'theta': [5/7]*n_draws  # my theta is their X*7 I think) --- X is imported cases per week
+               }, index=[str(x) for x in range(n_draws)]).T  # TODO: make this index cooler
 
-from vivarium_uw_covid.components.seiir_beta import *
-from vivarium_uw_covid.components.seiir_agent import *
+initial_states = pd.DataFrame({'S': [4_990]*n_draws,
+                               'E': [0]*n_draws,
+                               'I1': [10]*n_draws,
+                               'I2': [0]*n_draws,
+                               'R':[0]*n_draws})
+
+beta = pd.DataFrame(index=pd.date_range(t0, t1))
+for draw in range(n_draws):
+    beta[draw] = 0.085
 
 
 
 def test_run_agent_model():
-    beta = beta_predict(coeffs, df_covs)
-
     n_draws = 2
     df_draws = run_agent_model(n_draws, n_simulants=100_000,
                               params=params, beta=beta,

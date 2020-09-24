@@ -31,7 +31,7 @@ def agent_covid_initial_states(n_simulants, compartment_sizes):
     return state
 
 
-def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta,
+def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta, date,
                      use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Make one step for agent-based model
 
@@ -40,6 +40,10 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta,
     df : pd.DataFrame of population table for agents: each row is an individual,
          and column 'covid_state' indicates which individuals are S, E, I1, I2, and R
     alpha, beta, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
+    date : pd.Timestamp, to record the day of infection for those infected during this timestep
+    use_mechanistic_testing : bool
+    test_rate : tests per person per day
+    test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
 
     Results
     -------
@@ -53,7 +57,7 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta,
     return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
                                                 use_mechanistic_testing, test_rate, test_positive_rate)
 
-def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta, date,
                                          use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Make one step for agent-based model, after infection rate has been calculated
 
@@ -63,6 +67,7 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
          and column 'covid_state' indicates which individuals are S, E, I1, I2, and R
     infection_rate : float, 0 <= infection_rate < 1
     alpha, beta, gamma1, gamma2, sigma, theta : parameter values for infectious disease dynamics
+    date : pd.Timestamp, to record the day of infection for those infected during this timestep
     use_mechanistic_testing : bool
     test_rate : tests per person per day
     test_positive_rate : fraction of daily tests that test positive (if there are enough infections to do so)
@@ -94,6 +99,7 @@ def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamm
         pr_S_to_E = 1 - np.exp(-dt*infection_rate)
         rows = (df.covid_state == 'S') & (uniform_random_draw < pr_S_to_E)
         df.loc[rows, 'covid_state'] = 'E'
+        df.loc[rows, 'infection_date'] = date
         n_new_infections += np.sum(rows)
 
     #### code for mechanistic testing-and-isolation model
@@ -152,6 +158,7 @@ def run_one_agent_model(n_draws, n_simulants, params, beta, start_time, end_time
     for t in df_counts.index[1:]:
         df_counts.loc[t] = agent_covid_step(df,
                                             beta=beta.loc[t],
+                                            date=t,
                                             use_mechanistic_testing=use_mechanistic_testing,
                                             test_rate=test_rate,
                                             test_positive_rate=test_positive_rate,
