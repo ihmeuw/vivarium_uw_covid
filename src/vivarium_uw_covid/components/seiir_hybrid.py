@@ -39,7 +39,7 @@ def compartmental_hybrid_step(s_compartment, s_agent, mixing_parameter, **params
                
 def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
                            beta_agent, beta_compartment,
-                           gamma1, gamma2, sigma, theta,
+                           gamma1, gamma2, sigma, theta, date,
                            use_mechanistic_testing=False, test_rate=.001, test_positive_rate=.05):
     """Make one step for hybrid model
 
@@ -61,7 +61,7 @@ def individual_hybrid_step(df, s_compartment, mixing_parameter, alpha,
     infection_rate = ((1 - mixing_parameter) * (beta_agent * n_infectious_agent**alpha + theta) / n_simulants_agent
                       + mixing_parameter * beta_compartment * n_infectious_compartment**alpha / n_simulants_compartment)
 
-    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta, date,
                                                 use_mechanistic_testing, test_rate, test_positive_rate)
                
 
@@ -124,6 +124,7 @@ def run_one_hybrid_model(draw, n_simulants, mixing_parameter, params,
         
         df_individual_counts.loc[t+dt] = individual_hybrid_step(df_individual,
                                     df_compartment.loc[t],
+                                    date=t+dt,
                                     beta_agent=beta_agent.loc[t, draw],
                                     beta_compartment=beta_compartment.loc[t, draw],
                                     mixing_parameter=mixing_parameter,
