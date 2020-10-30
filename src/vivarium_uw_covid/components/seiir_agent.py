@@ -54,7 +54,7 @@ def agent_covid_step(df, alpha, beta, gamma1, gamma2, sigma, theta, date,
     n_simulants = len(df)
     infection_rate = (beta * n_infectious**alpha + theta) / n_simulants
 
-    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta,
+    return agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta, date,
                                                 use_mechanistic_testing, test_rate, test_positive_rate)
 
 def agent_covid_step_with_infection_rate(df, infection_rate, alpha, gamma1, gamma2, sigma, theta, date,
