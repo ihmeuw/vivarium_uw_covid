@@ -103,24 +103,36 @@ def _load_em_from_meid(location, meid, measure):
     return utilities.sort_hierarchical_data(data)
 
 
-from ..paths import SEIIR_DIR, RATES_DIR, UW_DATA_DIR
+UW_DATA_DIR = '/ihme/homes/abie/notebook/2020/data'
 
-def load_covariates(cov_dir):
+def load_covariates(cov_dir, location_id):
     """Load all covariate values
     
     Parameters
     ----------
-    cov_dir : str, a directory in $SEIIR_DIR/covariate/,
-              e.g. '2020_06_23.03.01'
+    cov_dir : str, a directory in /ihme/covid-19/seir-covariates/,
+              e.g. 'best'
     
     Results
     -------
     returns pd.DataFrame with columns for covariates,
     rows for each location for each time
     """
-    
-    df_covs = pd.read_csv(f'{SEIIR_DIR}/covariate/{cov_dir}/cached_covariates.csv', index_col=0)
-    df_covs.index = df_covs.date.map(pd.Timestamp)
+    cov_list = ['testing', 'mask_use', 'mobility', 'proportion_over_1k',  'proportion_over_5k',  # HACK: start with something that is a dataframe to get the index set
+                'air_pollution_pm_2_5', 'lri_mortality', 'pneumonia',
+                'proportion_over_2_5k', 'proportion_under_100m', 'smoking_prevalence',
+                'temperature']
+
+    df_covs = pd.DataFrame()
+    for cov in cov_list:
+        t = pd.read_csv(f'/ihme/covid-19/seir-covariates/{cov_dir}/{cov}/reference_scenario.csv')
+        t = t.set_index('location_id')
+        tt = t.loc[location_id]
+        if isinstance(tt, pd.DataFrame):
+            tt = tt.set_index('date')
+        df_covs[cov] = tt[f'{cov}_reference']
+
+    df_covs.index = df_covs.index.map(pd.Timestamp)
     return df_covs
 
 
@@ -129,8 +141,8 @@ def load_effect_coefficients(run_dir, loc_id):
     
     Parameters
     ----------
-    run_dir : str, a directory in $SEIIR_DIR/regression/,
-              e.g. '2020_06_23.07'
+    run_dir : str, a directory in /ihme/covid-19/seir-regression/,
+              e.g. 'best'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     
@@ -141,8 +153,8 @@ def load_effect_coefficients(run_dir, loc_id):
     """
     coeffs = {}
     for draw in range(1_000):
-        df_coeffs = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/coefficients/coefficients_{draw}.csv', index_col=0)
-        s_coeffs = df_coeffs.set_index('group_id').loc[loc_id].sort_values()
+        df_coeffs = pd.read_csv(f'/ihme/covid-19/seir-regression/{run_dir}/coefficients/draw_{draw}.csv')
+        s_coeffs = df_coeffs.set_index('location_id').loc[loc_id]
         coeffs[draw] = s_coeffs
     coeffs = pd.DataFrame(coeffs).T
     return coeffs
@@ -153,8 +165,8 @@ def load_beta_fit(run_dir, loc_id):
     
     Parameters
     ----------
-    run_dir : str, a directory in $SEIIR_DIR/regression/,
-              e.g. '2020_06_23.07'
+    run_dir : str, a directory in /ihme/covid-19/seir-regression/,
+              e.g. 'best'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     
@@ -164,7 +176,9 @@ def load_beta_fit(run_dir, loc_id):
     """
     betas = []
     for draw in range(1_000):
-        df_fit = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/betas/{loc_id}/fit_draw_{draw}.csv', index_col=0)
+        df_fit = pd.read_csv(f'/ihme/covid-19/seir-regression/{run_dir}/beta/draw_{draw}.csv')
+        df_fit = df_fit.set_index('location_id').loc[loc_id]
+
         df_fit['draw'] = draw
         betas.append(df_fit)
     return pd.concat(betas)
@@ -175,8 +189,8 @@ def load_seiir_compartment_sizes(run_dir, loc_id):
     
     Parameters
     ----------
-    run_dir : str, a directory in $SEIIR_DIR/regression/,
-              e.g. '2020_06_23.07'
+    run_dir : str, a directory in /ihme/covid-19/seir-regression/,
+              e.g. 'best'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     
@@ -188,7 +202,9 @@ def load_seiir_compartment_sizes(run_dir, loc_id):
 
     compartment_sizes = []
     for draw in range(1_000):
-        df_proj = pd.read_csv(f'{SEIIR_DIR}/forecast/{run_dir}/component_draws/{loc_id}/draw_{draw}.csv', index_col=0)
+        df_proj = pd.read_csv(f'/ihme/covid-19/seir-forecast/{run_dir}/reference/component_draws/draw_{draw}.csv')
+        df_proj = df_proj.set_index('location_id').loc[loc_id]
+
         df_proj.index = df_proj.pop('date').map(pd.Timestamp)
         df_proj['draw'] = draw
         compartment_sizes.append(df_proj)
@@ -201,8 +217,8 @@ def load_seiir_params(run_dir, theta):
     
     Parameters
     ----------
-    run_dir : str, a directory in $SEIIR_DIR/regression/,
-              e.g. '2020_06_23.07'
+    run_dir : str, a directory in /ihme/covid-19/seir-regression/,
+              e.g. 'best'
     theta : float > 0, the value of the theta parameter, which is not stored
             the param_draw csv
     
@@ -214,11 +230,12 @@ def load_seiir_params(run_dir, theta):
     params = {}
     for draw in range(1_000):
         draw = str(draw)
-        df_params = pd.read_csv(f'{SEIIR_DIR}/regression/{run_dir}/parameters/params_draw_{draw}.csv')
+        df_params = pd.read_csv(f'/ihme/covid-19/seir-regression/{run_dir}/parameters/draw_{draw}.csv')
         params[draw] = df_params.set_index('params')['values'].to_dict()
         params[draw].pop('day_shift')  # TODO: find out what this is, and if I should be using it
         params[draw]['theta'] = theta
     
+    params = pd.DataFrame(params)
     return params
 
 
@@ -229,8 +246,8 @@ def extract_covid_projection_data(art_fname, run_dir, loc_id):
     Parameters
     ----------
     art_fname : str, path for vivarium artifact to hold transformed data
-    run_dir : str, a directory in $SEIIR_DIR/regression/,
-              e.g. '2020_06_23.07'
+    run_dir : str, a directory in /ihme/covid-19/seir-regression/,
+              e.g. 'best'
     loc_id : int, a location id, e.g. 60886 for "King and Snohomish Counties", described in e.g.
              /ihme/covid-19/model-inputs/best/locations/covariate_with_aggregates_hierarchy.csv
     
@@ -238,8 +255,7 @@ def extract_covid_projection_data(art_fname, run_dir, loc_id):
     -------
     returns Vivarium Artifact
     """
-    settings = json.load(open(f'{SEIIR_DIR}/forecast/{run_dir}/settings.json'))
-    cov_dir = settings['covariate_version']
+    cov_dir = 'best'
     rates_dir = 'best'
     loc_id = int(loc_id)
 
@@ -249,8 +265,7 @@ def extract_covid_projection_data(art_fname, run_dir, loc_id):
     art.write('metadata.data_params', metadata_dict)
 
 
-    df_covs = load_covariates(cov_dir)
-    df_covs = df_covs[df_covs.location_id == loc_id]
+    df_covs = load_covariates(cov_dir, loc_id)
     assert len(df_covs) > 0
     art.write('beta.covariates', df_covs)
 
@@ -295,14 +310,14 @@ def load_ifr(rates_dir):
 
     Parameters
     ----------
-    rates_dir : str, a directory in $RATES_DIR/,
-              e.g. '2020_06_29.01'
+    rates_dir : str, a directory in /ihme/covid-19/rates,
+              e.g. 'best'
     
     Results
     -------
     return pd.DataFrame
     """
-    df_ifr = pd.read_csv(f'{RATES_DIR}/{rates_dir}/ifr_preds_1yr.csv')
+    df_ifr = pd.read_csv(f'/ihme/covid-19/rates/{rates_dir}/ifr_preds_1yr.csv')
     return df_ifr
 
 

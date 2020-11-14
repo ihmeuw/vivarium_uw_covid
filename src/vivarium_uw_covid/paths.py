@@ -8,6 +8,3 @@ ARTIFACT_ROOT = Path(f"/share/costeffectiveness/artifacts/{project_globals.PROJE
 MODEL_SPEC_DIR = BASE_DIR / 'model_specifications'
 RESULTS_ROOT = Path(f'/share/costeffectiveness/results/{project_globals.PROJECT_NAME}/')
 
-SEIIR_DIR = '/ihme/covid-19/seir-pipeline-outputs'
-RATES_DIR = '/ihme/covid-19/rates'
-UW_DATA_DIR = '/ihme/homes/abie/notebook/2020/data'
